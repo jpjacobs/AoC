@@ -25,6 +25,7 @@ NB.    4: j9.6 Beta10 fails, likely in fold, while no problem for j9.5
 NB.   12
 NB.   15: ([: post ] F.. ) faster than (post F.. ); bug in 0".'-' == _ instead of 0
 NB.   16: Making SEEN sparse makes method fail
+NB.   20: using threads in p1 or p2 fails both in j9.5 (free(): invalid pointer) and j9.6 (double free or corruption (out) )
 
 NB. spin up threads up to # of cores 
 0&T.@0^:(0>._1+([: {. 8&T.)-1&T.) '' 
@@ -1075,94 +1076,104 @@ hdj{m>838:A,pv}
 }}
 0
 }}
-
 20 day {{ NB. Pulse Propagation
 NB. 1000 button presses send low pulses;
 NB. % flips when L, sends new state, H ignored, no pulse
 NB. & remembers prev state per input, when pulse arrives, updates and if *./mem send L, else H.
-par =: {{ NB. parse input to op;indices of incoming;ind of out
-  srty=. \:~];._2 y
-  NB. note, not all syms have outgoing connections, they also have no type. }. so same syms as next line
+par =: {{ NB. parse input to kind;op;indices of incoming;ind of out
+  srty=. \:~];._2 y NB. Puts broadcaster first.
+  NB. Note, not all syms have outgoing connections. Missing ones have no type. }. cuts type character from symbol.
+  NB. Find all nodes; convert to symbols
   symstot =. ~.s:<;._1;<@('-,'rplc~',',-.&(' >')@}.)"1 srty
+  NB. Find kinds and symbols mentioned as sources
   'kind syms'=. <@:;`(<@s:)"1|:([:(}.;~'%&b'i.{.)' ->'&taketo)"1 srty
+  NB. symdiff are symbols only present as destinations
   symdiff =. symstot-.syms
+  NB. Add those to kid and syms as well, so they correspond.
   kind    =. kind,3#~nd=.#symdiff
   syms    =. syms,symdiff
-  NB. out has 58 which should not happen
+  NB. Find destinations, adding empty boxes for dest-only syms
   out =. (nd#a:),~([:<@(syms i. s:) [:<;._1',',' '-.~'-> '&takeafter)"1 srty
+  NB. Find incoming connections
   in  =. (<@({:"1 #~ ~:/"1)/.~ {."1) (/:{."1);((,~@],,.)&.> i.@#) out
   kind ; syms ; in ,&< out
 }}
-init =: {{ NB. set globals and initialise memories
+init =: {{ NB. Set globals and initialise memories
   'KIND SYMS IN OUT'=:par y
   MEM =: 0$~,~#KIND
 }}
-NB. pulses represented by Dest Source HL tripple
-NB. flip flop: y=pulse,ind uses globals MEM IN OUT
+NB. Pulses represented by Dest Source HL tripple
+NB. flip flop/conji/nop: y=pulse,ind uses globals MEM, IN & OUT
 ff=:{{
   'd s p'=.y NB. dest source pulse (source not used)
   if. -.p do.
-    MEM=: -.&.((<d,0)&{) MEM NB. flip mem
-    OUT ((d,.~[),.{.@])&(d&{::) MEM NB. return new pulse
+    MEM=: -.&.((<d,0)&{) MEM        NB. Flip mem
+    OUT ((d,.~[),.{.@])&(d&{::) MEM NB. Return new pulse
   else.
-    0 3$0
+    0 3$0                           NB. no pulse
   end.
 }}
 conj=:{{
   'd s p'=.y
-  MEM=: p (<d,s)} MEM NB. update memory d at pos s
-  val=. -.*./MEM{~(<d;d{IN)
-  (d,.~d{::OUT),.val  NB. return pulse
+  MEM=: p (<d,s)} MEM        NB. update memory d at pos s
+  val=. -.*./MEM{~(<d;d{IN)  NB. pulse value
+  (d,.~d{::OUT),.val         NB. return pulse
 }}
-nop=: (0 3$0)"_
+nop=: (0 3$0)"_ NB. never sends a pulse
 p1 =: {{
   init y
-  bc =: ((0{::OUT),"0 _] 0 0)"1 NB. defined here so no recalc of out.
-  pp =: (ff`conj`bc`nop)@.(KIND{~{.) NB. process pulse
-  ct =. 0 0 NB. counts for H/L pulses
+  NB. broadcast  and process pulse verbs; defined here so no recalc of out.
+  bc =: ((0{::OUT),"0 _] 0 0)"1      NB. bc is node 0 
+  pp =: (ff`conj`bc`nop)@.(KIND{~{.) NB. process pulse~kind
+  ct =. 0 0                          NB. counts for L/H pulses
   for. i. 1000 do. NB. limit to 1000 for part 1 only
-    pulses=. ,:0 1000 0
-    ct=. ct+1 0 NB. 1 for initial button L 
+    pulses=. ,:0 1000 0              NB. button pulse to bc
+    ct=. ct+1 0                      NB. 1 for initial button L 
     while. #pulses do.
-      pulses=. ;@:(<@pp"1) pulses
-      NB. pulses=: ;@:(pp t.0"1) pulses
+      pulses=. ;@:(<@pp"1) pulses    NB. process all pulses
+      NB. pulses=. ;@:(pp t.''"1) pulses NB. TODO BUG crashes J9.5
       ct=. ct+ +/(,.~ -.){:"1 pulses
     end.
   end.
-  */ct
+  */ct NB. Result: product of totals of low and high pulses.
 }}
-NB. Adapting p1 to solve problem 2 doesn't find pulse before 1e6 presses
-NB. Second approach, after inspection of graph: check high inputs to last conjunction, and hope they immediately go into a cycle.
+NB. Part 2: How many key presses before a single low pulse reaches the node named 'rx'
+NB. Adapting p1 to solve problem 2 doesn't find pulse before 1e6 presses.
+NB. After inspection of the graph: it seems the last conjunction before rx might be key.
+NB. Check high inputs to last conjunction, and hope they immediately go into a cycle after the first high
 p2 =: {{
-  init y
-  bc =: ((0{::OUT),"0 _] 0 0)"1 NB. so no recalc of out.
-  pp =: (ff`conj`bc`nop)@.(KIND{~{.) NB. process pulse
-  rx=.(SYMS i. s:<'rx') NB. special return node (should be last)
+  init y                              NB. init, bc, pp as for part 1
+  bc =: ((0{::OUT),"0 _] 0 0)"1 
+  pp =: (ff`conj`bc`nop)@.(KIND{~{.) 
+  rx=.(SYMS i. s:<'rx')               NB. Special return node (should be last)
   it=.0
-  NB. last node before rx is &7 having parents 1 3 4 5
-  NB. assume similar setup for other inputs
-  concmemi =. <,{&IN&>^:(1 2) <rx     NB. memory indexes for conc
-  conc     =. {.0{::>concmemi         NB. concentrator index
-  found    =. a: $~ {: #&> > concmemi NB. found high pulses 
-  NB. find lengths of cycles giving 1 Low (assume that it hits a loop immediately)
-  while. (2><./#&>found) do. NB. until 2 low found for all
-    pulses=. ,:0 1000 0    NB. new button press (dest,src,level)
+  NB. Last node before rx is &7 having parents 1 3 4 5
+  NB. Assume similar setup for inputs other than mine.
+  lconmemi =. <,{&IN&>^:(1 2) <rx     NB. Memory indexes for last conjunction
+  lcon     =. {.0{::>lconmemi         NB. Last concentrator index
+  found   =. a: $~ {: #&> > lconmemi   NB. Found high pulses 
+  NB. Find lengths of cycles giving 1 high at input of last conj (assume that cycles loop after first H)
+  while. (2><./#&>found) do.          NB. Until 2 low found for all inputs to lcon
+    pulses=. ,:0 1000 0               NB. New button press (dest,src,level)
     while. #pulses do.
-      t=. conc e. {."1 pulses NB. test if conc receives pulses
-      pulses=. ;@:(<@pp"1) pulses
-      NB. pulses=: ;@:(pp t.0"1) pulses NB. parallel version
-      if. t do. NB. conc was target
-        hit   =. I. {. concmemi {MEM
-        found =. ([: ~. ,&it)&.>&.(hit&{) found
+      t=. lcon e. {."1 pulses         NB. Test if lcon will receive pulses (here before updating pulses)
+      pulses=. ;@:(<@pp"1) pulses     NB. Generate the pulses
+      NB. pulses=. ;@:(pp t.''"1) pulses NB. TODO BUG parallel version Crashes J (android)
+      if. t do.                       NB. lcon was target
+        hit   =. I. {. lconmemi {MEM  NB. Find which input was hit ({. because 1 4-:$ lconmemi { MEM)
+        found =. ([: ~. ,&it)&.>&.(hit&{) found NB. Append iteration to found loop indexes
       end.
     end.
     it=.it+1
   end.
-  startlen =. (-~/\)"1 > found 
-  NB. from day 9; TODO slow, fix. modular primitives?
-  combcyc =. {{({:y)+^:(({.x)~:({:x)|])^:_ {.y}},*.&{:
-  1+{. combcyc/ startlen
+  len =. (-~/)"1 > found              NB. Loop lengths
+  *./len                              NB. Loops sync at *./len
 }}
+  NB. Had taken this from day 9 instead of what followed while loop above.
+  NB. Not super slow, but better found for that day used here as well:
+  NB. startlen =. (-~/\)"1 > found 
+  NB. combcyc =. {{({:y)+^:(({.x)~:({:x)|])^:_ {.y}},*.&{:
+  NB. 1+{. combcyc/ startlen
 tst=:{{)n
 broadcaster -> a, b, c
 %a -> b
@@ -1173,38 +1184,27 @@ broadcaster -> a, b, c
 0
 }}
 21 day {{ NB. Step Counter
-NB. starting from S how many squares can be reached in 64 steps
-NB. coordinated of garden plots, starting with start (0)
+NB. Part 1: Starting from S how many squares can be reached in 64 steps
+NB. Coordinates of garden plots, putting start square first (0)
 par =: [: ; 'S.' ([:<$@] #:[I.@:=,@])"0 _ ];._2
-sh4 =: <. +. 0j1^i.4  NB. shift in 4 cardinal directions
+sh4 =: <. +. 0j1^i.4 NB. shift in 4 cardinal directions
 NB. v neighbours with extra non-neighbour row
 neigh =: [: (],>./@,)@|: ] i.!.0 sh4 +"1/ ]
-p1 =: #@(0 ({:@{:@[ -.~ [: ~.@, {~)^:64~ neigh)@par
-NB. part 2: plots repeat infinitely and not 64 but 26501365 steps
-NB. - avoid flipflopping neighbours already seen
-NB. - use same approach, but add edge connections, and keep plot offsets
-NB. m: it; x: starting point(s)(centered around middle); y: input
-one=: {{ NB. x: its at which count is needed; y: field
-  nn  =. neigh par y NB. non-wrap neighbours
-  NB. coords of indices into as in par.
-  inds =. ; 'S.' <@($@]#:(I.@:=,))"0 _ ];._2 y
-  nonn =. {:{:nn     NB. non-neigh index
-  cur =. (i.!.0 -:@:(>./)) inds NB. start=center
-  seo =. cur;0$0 NB. seen ind in odd/even iterations
-  ret =. 0$0
-  for_i. >: i. >./x do.
-    cur =. , cur{nn
-    NB. remove non-neigh and seen i
-    NB.     (non-neigh or non-unique) not-or seen
-    cur =. cur ([#~(=&nonn +. -.@~:)@[ +: e.!.0) seo{::~2|i
-    NB. add to seen i
-    seo =. ,&cur&.>&.((2|i)&{) seo
-    if. i e. x do.
-      ret =. ret,#(2|i){::seo NB. add to debug-return for each step.
-    end.
-  end.
-  ret
-}}
+NB.    init non-neig drop  uniq curn    64x  neigh
+p1 =: #@(0 ({:@{:@[  -.~ [: ~.@, {~)^:64~ neigh)@par
+
+NB. Part 2: plots repeat infinitely(!) and not 64 but 26501365(!) steps. Try to:
+NB. - Avoid flipflopping neighbours already seen
+NB. - Use same approach, but add edge connections, and keep plot offsets
+NB. This one had me stumped for months, couldn't figure it out.
+NB. Finally, reading around, noticed that actual input had diamond shaped
+NB. structure not present in test...  I realised: the structure causes edges of
+NB. blocks to be reached equally fast on all sides (in 65 steps from the
+NB. center), causing the diamond to be as full as it gets, or in 131 from edge
+NB. to edge.  Looking at the macro-structure of repeated blocks, you can
+NB. extrapolate the number of plots reached, based on from which side the block
+NB. is approachedr. Experimentally verified N,S,E,W blocks are identical, as
+NB. well as diagonal and full blocks.
 {{)n 'block setup rad=3,2 and 1'
    N     North
   DFD    D=NW/NE, F=Full   N
@@ -1219,50 +1219,77 @@ WFFFFFE  West/Full/East  WFFFE  WFE
    [ 1  5 1 ] . [F] = (65 +1 2 3*131) one 7 nup io''
    [ 1 13 2 ]   [D]
 }}
-p2=: 26501365&{{
-  NB. x nit; y: input (assumed to have diamond-shaped corridors and cross connections)
-  hf  =: <:-:<: sz =: #];._2 y NB. assume square
-  rad =: x (]%~(--:@<:)) sz NB. radius in tiles after center one NSEW
-  NB. counting visited squares for sizes 3x3, 5x5, 7x7 allows solving system to find numbers of visited fields in 4 corners(c), full (f) fields and 4 diagonals (d):
-  cfd =: (1 1 0,1 5 1,:1 13 2)%.~ (65+131*1 2 3) one 7 nup y
-  NB. extrapolate for full number of iterations, knowing counts of corners, full and diagonal fields.
-  cfd +/ .*&x: num=:1,((1++:@(*<:)),<:)rad
+
+NB. walk (verb) does one walk of x iterations starting from middle on a single field
+NB. x: iterations to run; y: input field as text
+walk=: {{ NB. x: its at which count is needed; y: field
+  nn   =. neigh inds =.par y       NB. Non-wrap neighbours of inds
+  nonn =. {:{:nn                   NB. Non-neigh index
+  cur  =. (i.!.0 -:@:(>./)) inds   NB. Start=center, so find center index
+  soe  =. cur;0$0                  NB. Seen plot inds in odd/even iterations
+  ret  =. 0$0
+  for_i. >: i. >./x do.            NB. Loop until for i=1...max(x)
+    cur =. , cur{nn                NB. Get new neighbours
+    NB. Remove non-neigh and seen in odd/even iterations
+    NB.       (non-neigh or non-unique) not-or seen 
+    cur =. cur ([#~(=&nonn +. -.@~:)@[ +: e.!.0) soe{::~2|i
+    soe =. ,&cur&.>&.((2|i)&{) soe NB. Add cur (all new) to seen at index 2|i
+    if. i e. x do.                 NB. one of given iteration lengths reached, save
+      ret =. ret,#(2|i){::soe      NB. add to return values for each step.
+    end.
+  end.
+  ret
 }}
-NB. repeat tile y x times; transpose inspired by kronecker product, see Essays.
+p2=: 26501365&{{
+  NB. x nit (from problem text); y: input (assumed to have diamond-shaped
+  NB. corridors and cross connections, and square)
+  rad =. x (]%~(--:@<:)) #];._2 y  NB. Radius in tiles after center one NSEW
+  NB. Counting visited squares for sizes 3x3, 5x5, 7x7 allows solving system to
+  NB. find numbers of visited fields in 4 corners(c), full (f) fields and 4
+  NB. diagonals (d):
+  NB.    matrix (see above)   %.~ totals  3,5,7  walk 7x7 replicated inputs
+  cfd =. (1 1 0,1 5 1,:1 13 2)%.~ (65+131*1 2 3) walk 7 nup y
+  NB. Extrapolate for full number of iterations, knowing counts of corners, full and diagonal fields.
+  NB. Number of fields in each c,f,d times number of c, f and d blocks.
+  cfd +/ .*&x: num=.1,((1++:@(*<:)),<:)rad
+}}
+NB. Repeat tile y x times; transpose inspired by kronecker product, see Essays.
 nup=: [: , LF,.~ [:,/"2 [:,/ 0 2 1 3 |: ,~@[ >@$ [:<];._2@]
 0
 }}
 22 day {{ NB. Sand Slabs
-NB. exploration: ~1.2k blocks, max len=5; so can split in cubes
-NB. parse input to cubes
-sortz=: /: <./@{:"1&> NB. sort blocks ascending by lowest z values
-par=: [: sortz ([:(<./<@:|:@:+(**/[:i.1+>./)@:(-~/)) _3]\ ".@rplc&', ~,');._2
-NB. drops blocks boxed blocks in y (assumed sorted)until they can, returning the modified blocks (in the same order)
-dropbl=:{{
-  NB. y: boxed blocks, expected sorted by lowest z cube
-  field =. 0 2$0
-  height=. 0$0
-  for_bb. y do. 
+NB. Data exploration: ~1.2k 3D blocks of max 5 cubes, so can split ranges.
+NB. Parse input, blocks given as ranges, to boxed sets of cubes.
+par=: [: sortz ([:(<./<@:|:@:+(**/[:i.1+>./)@:(-~/)) _3]\ ".@rplc&'~,');._2
+sortz=: /: <./@{:"1&> NB. Sort blocks ascending by lowest z values
+NB. Drop blocks in y until they can, return modified blocks (keeping order).
+dropbl=:{{ NB. y: boxed blocks, expected sorted by lowest z cube
+  field =. 0 2$0  NB. Top view (2D) of coordinates in field
+  height=. 0$0    NB. Heights of columns in field
+  for_bb. y do.   NB. Drop each block, from lowest up.
     b=.>bb
-    NB. find block b in field, and corresponding max height
+    NB. Find block b in field, and corresponding max height.
     mxh   =. >./ (height,0) {~ ind=. field i.!.0 xy=.}:"1 b
-    NB. add new xy coords; nu = new and unique xy coords
+    NB. Add unique new xy coords; keep the new mask as it's used further.
     field =. field,~. xy #~ new=. ind = #field 
-    NB. update existing heights, append new ones
-    bh =.mxh+1+(-<./){:"1 b NB. new block heights for each cube
-    newh   =. xy >.//.&(new&#) bh      NB. new heigts
-    updh   =. xy >.//.&((-.new)&#) bh  NB. heights for updating
-    updi   =. ~. ind #~ -. new         NB. and their indices
-    height =. newh,~ updh updi} height NB. update heights
-    NB. update b_index box in y to new height
-    y =.(bh,.~}:"1)&.>&.(bb_index&{) y
-  end.
+    NB. Update existing heights, append new ones.
+    bh     =. mxh+1+(-<./){:"1 b       NB. New height after dropping block
+    newh   =. xy >.//.&(new&#) bh      NB. New heigts (i.e. where xy new)
+    updh   =. xy >.//.&((-.new)&#) bh  NB. Heights requiring update (xy not new)
+    updi   =. ~. ind #~ -. new         NB. ... and their indices
+    height =. newh,~ updh updi} height NB. Update heights, append new heights
+    y =.(bh,.~}:"1)&.>&.(bb_index&{) y NB. Update b_index box in y to new height
+  end. NB. Implicitly returns y, last changed.
 }}
-NB. find how many bricks can be disintegrated without making any bricks fall further; do outfix on each cube, see whether remains the same (safe) or changes when attempting to drop further.
+NB. Part 1: Find how many bricks can be disintegrated without making any bricks
+NB. fall further; do outfix on each cube, and see whether remains the same
+NB. (safe) or changes when attempting to drop further.
 p1=: [: +/@:> 1 ( -:   dropbl) t. ''\. dropbl@:par
-NB. chain reaction: figure out sum of fallen blocks for each removed block
+NB. Part 2: Chain reaction: sum the #fallen blocks for each removed block.
 p2=: [: +/@:> 1 (+/@:~:dropbl) t. ''\. dropbl@:par
- NB. expect 5
+NB. dropbl does more work than needed, as only higher blocks would need to be
+NB. recalculated. A recursive solution could probably manage, but too much work
+NB. to change though.
 tst=:{{)n
 1,0,1~1,2,1
 0,0,2~2,0,2
@@ -1271,38 +1298,42 @@ tst=:{{)n
 2,0,5~2,2,5
 0,1,6~2,1,6
 1,1,8~1,1,9
-}}
-   NB. expect 2
+}} NB. Expect 5 and 7 for p1 and p2
 tst2 =:{{)n
 0 0 1~1 0 1
 0 1 1~0 1 2
 0 0 5~0 0 5
 0 0 4~0 1 4
-}}
+}} NB. expect 2 and 3 for p1 and p2
 0
 }}
+
 23 day {{ NB. A Long Walk
-NB. longest possible walk from top to bottom via . and >, but onlyusing going in arrow direction, and using each tile once.
+NB. Part 1: Find the longest possible walk from top to bottom via . and >, but
+NB. only going in arrow (slope) direction, and using each tile once.
 NB. viewmat '.# ><^v'i.];._2 io'' 
-NB. from the looks of it, paths are very tortuous, but not branching often: process to directed graph with distances as edge weightoNB. make new neigh function as needs to account for:
+NB. From the looks of it, paths are very tortuous, but not branching often:
+NB. process to directed graph with distances as edge weight. Make new neigh
+NB. function as needs to account for:
 NB. - directional neighbours
 NB. - path length between nodes
-sh4 =: <. +. 0j1^i.4  NB. shift in 4 cardinal directions
-NB. y: input, returns tile types and indices; .v>^< same as sh4
+sh4 =: <. +. 0j1^i.4  NB. Shift in 4 cardinal directions
+NB. Parse: y: input, returns tile types and indices; .v>^< same as sh4
 par =: [: (('.v>^<' i.'#'-.~,) ,. ($#:'#'I.@:~:,)) ];._2
-NB. find neighbours with right connections (. or slope in good dir}. 
+NB. Find neighbours with right connections (. or slope in good dir). 
 NB.      Non-neigh apd |:  types   non-neig<.+ big*  .  +: v > ^ <  neigh ind self shift4@:coords    
 neigh =: (5,~{."1);[: ({:@{: ,~ |:) (5,~{."1) (<:@#@[<.]+#@[*(0&= +: 1 2 3 4&=)@:{~) (i. sh4 +"1/])@:(}."1)
-NB. e.g. walk entire graph: $0 (] ~.@, ,@:{~)^:_~ NN
-NB. adapt to stop at crossing: y starting ind, prev ind (to be avoided).
-cr =: ''&$: : {{
-  while. 1 do.
-    msk=.([: *./"1 >&0 ) KI {~ l=.{&NN y
-    if. (2=+/ msk) +. (NON-1)={:y do. NB. 2 because NON always shows up, and has 4 neigh with kind=5; also stop if last reached
-    ({:,<:@#)  y return. NB. return crossing id and step count
+NB. Walking entire graph: $0 (] ~.@, ,@:{~)^:_~ NN
+NB. cr crawls graph but stops at crossing: y starting ind, x:prev ind (to be avoided).
+cr =: {{
+while. 1 do.                           NB. Assume all crossings are flanked by slopes
+  msk=.([: *./"1 >&0 ) KI {~ l=.{&NN y NB. Mask indicating neighbours of y all being slopes
+  if. (2=+/ msk) +. (NON-1)={:y do.    NB. 2 because NON always shows up, and has 4 neigh with kind=5; also stop if last reached
+    ({:,<:@#)  y return.               NB. Return crossing id (last y) and step count
   else.
-    new=. x-.~ y ~.@, ,l
-    if. new-:y do. NON,__ return. else. y=.new end.
+    new=. x-.~ y ~.@, ,l               NB. new= y appended with newly encountered nodes, without seen ones
+    if. new-:y do. NON,__ return.      NB. Dead end.
+    else. y=.new end.                  NB. keep new as y with every step having one item in y.
   end.
 end.
 NON,__
@@ -1313,7 +1344,7 @@ NB. x: list of seen junctions, y: point uses global NN, NON,LAST
 rec =: {{
   'y nn'=. x cr prev=. y
   if. y>:(NON-1) do. nn return. end.
-  echo prev,_,y,nn,_,l=. NON-.~ NN {~ y 
+  l=. NON-.~ NN {~ y 
   nn + >./(x,y) rec"1 0 l return.
 }}
 p1 =: {{
