@@ -17,7 +17,7 @@ NB. TODO jaoc:
 NB. - if split off utility library next year:
 NB.   * connected component analysis (day 3,4)
 NB.   * interval arrithmetics (split, merge, ... day 5)
-NB. TODO: revision WIP: done till day 19
+NB. TODO: revision WIP: done till day 23, nonrec to speed up! and revise
 NB. TODO: rewrite day 12 to use numbered locales instead; try using locales as cache again, with enourmous hashtable sizes (left arg 11 to 
 NB. TODO: add expected results to test inputs.
 NB. TODO: report/enquire bugs days
@@ -1307,7 +1307,6 @@ tst2 =:{{)n
 }} NB. expect 2 and 3 for p1 and p2
 0
 }}
-
 23 day {{ NB. A Long Walk
 NB. Part 1: Find the longest possible walk from top to bottom via . and >, but
 NB. only going in arrow (slope) direction, and using each tile once.
@@ -1320,37 +1319,37 @@ NB. - path length between nodes
 sh4 =: <. +. 0j1^i.4  NB. Shift in 4 cardinal directions
 NB. Parse: y: input, returns tile types and indices; .v>^< same as sh4
 par =: [: (('.v>^<' i.'#'-.~,) ,. ($#:'#'I.@:~:,)) ];._2
-NB. Find neighbours with right connections (. or slope in good dir). 
+NB. Find neighbours with right connections (. or slope in good dir): returns kinds,neighbours
 NB.      Non-neigh apd |:  types   non-neig<.+ big*  .  +: v > ^ <  neigh ind self shift4@:coords    
 neigh =: (5,~{."1);[: ({:@{: ,~ |:) (5,~{."1) (<:@#@[<.]+#@[*(0&= +: 1 2 3 4&=)@:{~) (i. sh4 +"1/])@:(}."1)
+NB. Part 1: recursive approach. Avoids stepping back to already seen nodes.
+p1 =: {{
+  'KI NN'=:neigh par y NB. Initialize globals
+  NON=: {:{:NN         NB. NON is the non-neighbour index
+  <:'' rec 0           NB. Recurse, starting at node 0, having no seen nodes
+}}
+NB. Recursively walk our graph; only recurse at junction, else walk on.
+NB. x: list of seen junctions, y: current point. Uses global NN, NON,LAST
+rec =: {{
+  'y ns'=. x cr prev=. y              NB. Crawl, avoiding x, get next crossing and #steps
+  if. y>:(NON-1) do. ns return. end.  NB. If end-node found, return number of steps
+  l=. NON-.~ NN {~ y                  NB. List of neighbours
+  ns + >./(x,y) rec"1 0 l return.     NB. Recurse with list of neighbours, with updated avoid list
+                                      NB. Returns #steps already taken+ steps from neighbours to last
+}}
 NB. Walking entire graph: $0 (] ~.@, ,@:{~)^:_~ NN
 NB. cr crawls graph but stops at crossing: y starting ind, x:prev ind (to be avoided).
 cr =: {{
 while. 1 do.                           NB. Assume all crossings are flanked by slopes
-  msk=.([: *./"1 >&0 ) KI {~ l=.{&NN y NB. Mask indicating neighbours of y all being slopes
-  if. (2=+/ msk) +. (NON-1)={:y do.    NB. 2 because NON always shows up, and has 4 neigh with kind=5; also stop if last reached
+  msk=.([: *./"1 >&0 ) KI {~ l=.{&NN y NB. Mask indicating neighbours of y all being slopes (or NON)
+  if. (2=+/ msk) +. (NON-1)={:y do.    NB. Crossing, or last? 2 because NON always shows up, and has 4 neigh with kind=5
     ({:,<:@#)  y return.               NB. Return crossing id (last y) and step count
   else.
-    new=. x-.~ y ~.@, ,l               NB. new= y appended with newly encountered nodes, without seen ones
-    if. new-:y do. NON,__ return.      NB. Dead end.
+    new=. x-.~ y ~.@, ,l               NB. new = y appended with newly encountered nodes, without seen ones
+    if. new-:y do. NON,__ return.      NB. Dead end; no new crossings to discover.
     else. y=.new end.                  NB. keep new as y with every step having one item in y.
   end.
 end.
-NON,__
-}}
-NB. simplify graph by removing 'tubes' ? maybe not even needed.
-NB. recursively walk our graph; if not junction, take next, recurse only at junction. 
-NB. x: list of seen junctions, y: point uses global NN, NON,LAST
-rec =: {{
-  'y nn'=. x cr prev=. y
-  if. y>:(NON-1) do. nn return. end.
-  l=. NON-.~ NN {~ y 
-  nn + >./(x,y) rec"1 0 l return.
-}}
-p1 =: {{
-  'KI NN'=:neigh par y
-  NON=: {:{:NN
-  <:'' rec 0
 }}
 tst=:{{)n
 #.#####################
@@ -1376,97 +1375,91 @@ tst=:{{)n
 #.###.###.#.###.#.#v###
 #.....###...###...#...#
 #####################.#
-}}
-NB. same as neigh above, but consider only 5 not connected
-neigh2 =: (5,~{."1);[: ({:@{: ,~ |:) (5,~{."1) (<:@#@[<.]+#@[*(5&=)@:{~) (i. sh4 +"1/])@:(}."1)
-recgr =: {{
-  'y nn'=. x cr prev=. y
-  if. y>:(NON-1) do. ,:prev,y,nn return. end.
-  l=. NON-.~ NN {~ y 
-  NB. echo prev,_,x,_,y,nn,_,l
-  NB. almost... spurious 0 row when end reached; still
-  (({:x),y,nn), ~.(x,y) ;@:(<@:recgr"1 0) l return.
-}}
-p2 =: {{ NB. works for tst, too slow on full. check where stuck. cut bad branches.
-  'KI NN'=:neigh2 IN=: par y
-  NON=: {:{:NN
-  numn =. 4-+/"1 NON=NN
-  NB. 'KI NN'=:neigh par y NB. TRY: use neigh2 for hub detect, neigh for walking so edges directed. still missing and more complicated, not assured all links are well behaved,e.g. <..> could happen...
-  'S D'=: I. 1=numn NB. start,dest
-  H    =: S,D,~I. 2<numn NB. hubs, crossings+S,D
-  NB. direct iteration of full adjacency matrix too slow for io''.
-  NB. start from all hubs, check where runners cross
-  st=.1[ cur=. ,.~H NB. step count, current active
-  unseen =. 0 H}1$~#NN NB. unseen nodes
-  newnn=. 0 3$0 NB. prev, cur, rel time, abs time
-  while. (#cur) do.
-   NB. echo'--- ',":st
-NB.    echo cur
-    NB.     filt nonneigh unique next  pr. hub  ,.~ nxt step.
+}} NB. p1 and p2 should return 94, 154
+NB. Part 2: The same, but ignoring slopes. Lots more possibilities, and p1 doesn't cut it.
+p2 =: {{
+  'KI NN'=:neigh2 IN=: par y  NB. New neigh; ignoring slopes
+  NON=: {:{:NN                NB. Still non-neighbour index
+  numn =. 4-+/"1 NON=NN       NB. number of neighbours per node
+  'S D'=: I. 1=numn           NB. Starting and destination nodes have 1 neighbour
+  C    =: S,D,~I. 2<numn      NB. crossings+S,D
+  NB. Create reduced graph, with only crossings as nodes, for speed.
+  NB. To calculate edges and lengths, start from all crossings, check where runners cross.
+  st=.1[ cur=. ,.~C           NB. Step count, current active = crossings, keeping also starting point
+  unseen =. 0 C}1$~#NN        NB. Unseen node mask: all but crossings
+  newnn=. 0 3$0               NB. New neighbour array: parent-child-distance
+  while. (#cur) do.           NB. While any active runners...
+    NB.    filt nonneigh unique next  pr. hub  ,.~ nxt step.
     cur =. (#~ ~:&NON@:({."1)) ((4#{:"1),.~ NN ,@:{~ {."1) prev=.cur
-
-    keep=. unseen{~{."1 cur 
+    keep=. unseen{~{."1 cur   NB. Keep where parent unseen
     cur=.keep#cur
-    if. 0=#cur do. break. end. NB. finished.
-    cc=. {."1 cur
-    NB. add connections to newnn before updating hubs in cur. cross if: same cc; cc neighbours
-    NB.      swap duplicates     hubs h~ pairs of selfie-antiselfie cc
-    same  =. (~: {"_1 (,:|.)"1) ({:"1 {~ [:(#~~:/"1) (i.~,.i:~)@:({."1)) cur NB. +:st
-    
-    cross =. ({:"1 cur){~cc i. (] ;@:(<@(,. ]#~e.&cc)"0 1) {&NN) cc NB. 1++:st prob: returns $0 result if #cur is empty.
+    if. 0=#cur do. break. end. NB. Finished, break early
+    cc=. {."1 cur             NB. Current runners
+    NB. Runners can either cross, or end on the same, parents of these should be linked.
+    NB.  - cross: e.g. AB -> BA; length = +:st
+    NB.  - same: e.g. A.B -> .C. length = 1++:st
+    NB. Add connections to newnn before updating hubs in cur.
+    NB.      swap duplicates     hubs {~ pairs of selfie-antiselfie cc
+    same  =. (~: {"_1 (,:|.)"1) ({:"1 {~ [:(#~~:/"1) (i.~,.i:~)@:({."1)) cur
+    cross =. ({:"1 cur){~cc i. (] ;@:(<@(,. ]#~e.&cc)"0 1) {&NN) cc
     newnn =. newnn, cross (, ,. (+:st)+1 0#~,&#) same
-    NB. if. 0<same>.&#cross do. 1+'a'[echo st;same;cross end.
-    unseen =. 0 (cc)}unseen NB. seen where in cur
+    unseen =. 0 (cc)}unseen   NB. Mask current runners in unseen
     st=.st+1
   end.
-  newnn
-  NB. re-index; indices can be glanced from newnn
+  NB. Re-index; indices can be glanced from newnn
   'S D L' =:gr =:({: ,~ (~.@, i.])@:}:) |: /:~ newnn
-  NB. iterative solution not trivial; recurse
-  NB. (i.>:{:S) recmax 0 0
-  NB. Non-recursive approach TODO: optim (binary mask instead of int list)/ parallel.
-  nonrec''
+  NB. Non-recursive approach
+  nonrecbm''
   }}
+NB. Same as neigh above, but consider only type 5 as not connected
+neigh2 =: (5,~{."1);[: ({:@{: ,~ |:) (5,~{."1) (<:@#@[<.]+#@[*(5&=)@:{~) (i. sh4 +"1/])@:(}."1)
+NB. Non-recursive version, iterates on currently reachable states, removing those that are done (i.e. reached the last node).
+NB. I tried filtering the hopeless ones (i.e. BEST > current length++/paths not taken yet), but there's so little of them that it slows more than it helps.
 nonrec=: {{
-  cur =. ,:0 0 NB. Length, visited nodes
+  cur =. ,:0 0 0 NB. Length, last, visited nodes (could use x: int for visited mask?)
   LD =.L,.D
   last =. {:S
   ct=:0
   BEST=: 0
   while. (#cur)*. ct<100 do.
-    echo ct,BEST,$cur
-    NB. problem: does not prohibit visiting twice & graph is undirected
-    NB. each state should track visited nodes and exclude those from selection
-    new =. LD (<@#~) S=/~ 1{"1 cur NB. LD for last path el 
-    cur =. (({.,/:~@}.)@}."1 (,~ >./)/.. {."1) ;new (((}.@],"1~ +&.({."1) ,. {:"1@[) #~ {:"1@[ -.@e. }.@])&.> <"1) cur
-    
-    NB. filter done&hopeless;
-    done =. (last e.}.)"1 cur
-    BEST =: BEST >. >./ done # {."1 cur
-    nohope =. BEST < ({."1 + (L +/@#~ ( S&e. +: D&e.)@}.)@}."1 ) cur
-    cur =. cur #~ -. (done +: nohope)
-    echo 'D,NH: ',":  done ,&(+/@:-.) nohope
+    NB. Each state should track visited nodes and exclude those from selection
+    new =. LD (<@#~) S=/~ 1{"1 cur NB. LD for last path el; box as not all same length.
+    NB.     last srt   nodes key,max   lengths        appd seen  sum first    new des cp new n not in nodes    boxr
+    cur =. (({.,/:~@}.)@}."1 (,~ >./)/.. {."1) ;new (((}.@],"1~ +&({."1) ,. {:"1@[) #~ {:"1@[ -.@e. }.@])&.> <"1) cur
+    done =. (last e.}.)"1 cur           NB. Find which are done, i.e. arrived at last node
+    BEST =: BEST >. >./ done # {."1 cur NB. Any better than best?
+    cur =. cur #~ -. done               NB. Filter done
     ct=:1+ct
   end.
   BEST
 }}
-recmax=: {{ NB. x: mask available nodes; y: current node
-'c l'=.y NB. current node&length so far
-NB. done if no x or c; no available nodes
-if. (x +.&(0=#) c) +.-.+./nn=.((S=c)*. D e.x) do.
-  if. BEST<l do.
-    echo 'B ',":BEST=: l
+NB. Trying to speed up, using binary masks (2 ints), rather than keeping all nodes on the path. About 15% faster
+nonrecbm=: {{
+  LD =.L,.D
+  last =. {:S
+  masks =: (#S){.(,|."1) 0,.1 (33 b.)~ i. 64 NB. Masks for nodes
+  cur =. ,:0 0,{.masks  NB. Length, last, visited nodes (could use x: int for visited mask?)
+  NB. Filter ind (y) where mask is allowable (cur =x); moved out of loop trying to squeeze some more speed...
+  NB.   i   0=curmask bin and   masks of ind
+  fm=:  ] #~ 0= 2&}.@[ +/@:(17 b.)"1 masks{~] 
+  NB. newc makes from x: cur and y: reachable ind the new cur
+  NB.      cur L + ni  L  sel  =D    LD  start   new  curmsk b-or of masks new inds (ni)
+  newc =: (({.@[ + ] ({."1@]#~(={:"1))LD#~S=1{[) , ] , (2}.[) 23 b. masks{~])"1 0
+  ct=:0
+  BEST=: 0
+  nthread=: - >:1 T.'' NB. nthreads + master
+  while. (#cur)*. ct<100 do.
+    NB. Each state should track visited nodes and exclude those from selection
+    NB. new =. ;@:((] <@:newc ]fm D#~S=1&{)"1) cur NB. LD for last path el NB. non-threaded version
+    new =. ;@:(nthread ;@:((] <@:newc ]fm D#~S=1&{)"1) t. ''\ ]) cur NB. Find new states per batch of cur
+    cur =. (}."1 (,~ >./)/.. {."1) new   NB. Keep best for each unique last,mask 
+    done =. last = 1&{"1 cur             NB. Find which are done, i.e. arrived at last node
+    BEST =: BEST >. >./ done # {."1 cur  NB. Any better than best?
+    cur =. cur #~ -. done                NB. Filter done
+    ct=:1+ct
   end.
-  l return.
-end.
-NB. abort hopeless branch TODO: Tighten: L contains both directions, of which only one can be used
-if. BEST>l++/L#~ D *.&(e.&x)S do. __ return. end.
-  nn
-  >./ (x-.c) recmax"1 (\:{:"1) (nn#D),.l+nn#L
+  BEST
 }}
-NB. not correct: 3720, 3695, 6563 and is <9430
-    NB. problem was too big for simple recursion, and for Floyd-Warschall kind of approaches
-    NB. previous approach, starting from S and running till D would be complicated: time calculation was complicated and links were missed because when two crawlers (cur) meet midway, they both stop, and the link is not registered. Find nodes in cur that are each others neighbours, and link their hubs; afterwards they can be deleted like any other node.
 0
 }}
 24 day {{ NB. Never Tell Me The Odds
