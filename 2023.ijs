@@ -7,31 +7,30 @@ end.
 }}''
 load'general/jaoc'
 NB. Setup this year
-setup_aoc_ 2023
-boxdraw_j_ 1
+'data23/'setup_aoc_ 2023
 NB. Notes:
 NB.  - This file uses jaoc for download/upload/day organisation
 NB.  - Each part of each day solves the entire problem, from the problem text up.
 NB.  - The solution don't depend on any library; sometimes plot or viewmat used for visualisation.
 NB.  - Recommended settings for vim: sw=2 ts=2 et fdm=marker foldmarker={{,}}
 
-NB. TODO jaoc:
-NB. - Bug: if input not available, and no internet, silently saves empty file, and uses this as input
-NB. - if split off utility library next year:
-NB.   * connected component analysis (day 3,4)
-NB.   * interval arrithmetics (split, merge, ... day 5)
-NB.   * min-cut & join for undirected graphs (day 25)
+NB. Techniques used (for easy retrieval in the furture)
+NB.   * connected component analysis (days 3, 10, 17, 21, 23)
+NB.   * interval arrithmetics (split, merge, ... days 5, 19)
+NB.   * Stoer-Wagner min-cut & join for undirected graphs (day 25)
+NB.   * Folds: F:. days 4, 18 ; F.. days 5, 15, 19, (8 only as slow alternative)
+NB.   * FSM (;:) : days 10, 12
+NB.   * Parallel (t.): days 12, 16 (with locales for caching), 22 and 23 (with partition adverbs)
 NB. TODO: report/enquire bugs days
-NB.   12
 NB.   15: 0&". '-' returns _ rather than 0
 NB.   15: ([: post ] F.. ) faster than (post F.. ); bug in 0".'-' == _ instead of 0
-NB.   16: Making SEEN sparse makes method fail
+NB.   16: Making SEEN sparse makes method fail; likely because sparse cannot be boxed, and therefore pyxed neither?
 NB.   20: using threads in p1 or p2 fails both in j9.5 (free(): invalid pointer) and j9.6 (double free or corruption (out) ); even if here would be non-sensical to use threads, shouldn't crash
 NB.   25: 9.6 leaks memory? Makes my PC very swappy, while 9.5 runs fine (though still needs 3 min).
 NB.   25: bug n eformat: error amend with wrong length replacement complains about rank instead.
 
 NB. Spin up threads up to # of cores
-0&T.@0^:(0>._1+([: {. 8&T.)-1&T.) '' 
+0&T.@0^:(0>._1+([: {. 8&T.)-1&T.) ''
 
 NB. Daily solutions:
 1 day {{ NB. Trebuchet?!
@@ -65,7 +64,7 @@ Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
 Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
 Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
 }} NB. expected: 8 2286 -: (p1,p2) tst
-NB. Parsing was most difficult for this day. 
+NB. Parsing was most difficult for this day.
 NB. Input is 100 games, seq numbered 1-100; parse to box per game, with each
 NB. game having boxed turns
 par =: <@:(_2 ]\&.> [: ". }.&.;:@:rplc&', ');._2@:r1
@@ -99,7 +98,7 @@ tst=:{{)n
 NB. pre finds connected components (9-connected) and sets globals:
 NB. LMAT (linearised matrix), LIND (linearised indices of non-dots) and BR (V) boxes runs of same type (i.e., numbers).
 pre =: {{
-  LMAT  =: , mat  =. '.',.~];._2 y                NB. (Linearized) matrix, extra . col for breaking numbers on edges  
+  LMAT  =: , mat  =. '.',.~];._2 y                NB. (Linearized) matrix, extra . col for breaking numbers on edges
   ind   =. ($mat)#: LIND=:I.@, (e.'.'-.~~.@,) mat NB. Non-dot indices in matrix and linear indices
   sh9   =. _1+3 3#:i.9                            NB. 9 neighbourhood shifts (noun)
   neigh =. [: |:@(,#) sh9 (]i.+"1/~) ]            NB. Neighbours, takes ind (verb)
@@ -111,7 +110,7 @@ pre =: {{
   cc NB. Return connected components.
 }}
 NB. Visualization in the above: viewmat (}:cc) ind} ($mat)$0
-NB. Per cc: lookup, convert to words then to num; symbols will generate empty boxes; 
+NB. Per cc: lookup, convert to words then to num; symbols will generate empty boxes;
 parts=:{{  NB. y=cc, global LIND & LMAT
   NB. Per cc: sum*has sym  ; do after lookup after boxing runs of inds & types (note that ".'$' produces empty) result is sum of numbers or 0 if no symbol.
   y (+/@;*a:&e.)@:(".@:{&LMAT&.>)@BR/. LIND
@@ -128,7 +127,7 @@ NB. Find gears, having 2 numbers and 1 *
   ([:".@; _1|./:~)&> gears
 }}
 NB. Part 2: Sum of gear ratios
-p2=: +/@gearratios@pre 
+p2=: +/@gearratios@pre
 0
 }}
 4 day {{ NB. Scratchcards
@@ -140,7 +139,7 @@ Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
 Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
 Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
 }} NB. Expected: 13 30 -: (p1,p2) tst
-NB. Part 1: Card score is 2^<:#co-occuring numbers 
+NB. Part 1: Card score is 2^<:#co-occuring numbers
 NB. Parse input to list of #co-occuring numbers
 par=: ([: +/@:e.&>/ [: <@".;._1'|',9&}.);._2
 p1 =: +/@(* * 2^<:)@par NB. * * because 0's should remain 0, not 1 (=2^0)
@@ -156,7 +155,7 @@ NB. Alternative recursive solution:
 NB.  30% faster, 10x fatter (likely due to passing matches entirely)
 pp2=: (rec 1$~#)@par
 NB. Recursive sol; x: matches; y: state
-rec=: {.@] + (}.@[ rec (}.@]+{.@] * {.@[ > i.@<:@#@]))`0:@.(0=#@]) 
+rec=: {.@] + (}.@[ rec (}.@]+{.@] * {.@[ > i.@<:@#@]))`0:@.(0=#@])
 0
 }}
 5 day {{ NB. If You Give A Seed A Fertilizer
@@ -210,7 +209,7 @@ humidity-to-location map:
 60 56 37
 56 93 4
 }} NB. Expected: 35 46 -: (p1,p2) tst
-NB. Standardise range: convert to diff/start/end; sort by start/end 
+NB. Standardise range: convert to diff/start/end; sort by start/end
 stdrg =: (/:}."1)@|:@dse&.>
 NB. Source ranges and backward ranges are:
 NB. - almost all adjacent, complete on 0 to big number;
@@ -266,7 +265,7 @@ cr =: {{ NB. y: |:dse ; Returns array of completed ranges
 6 day {{ NB. Wait for it
 par=: ".@(10&}.);._2         NB. Parse by dropping 10 characters
 NB. Part 1: Represent as polynomial, and find integer roots
-p1 =: [: */ ir@poly"1@|:@par 
+p1 =: [: */ ir@poly"1@|:@par
 NB. Convert to polynomial x^2-T.x+d = 0 to be solved
 poly =: 1 ,~ (,-)~/
 eps  =: (,-)_1e_10 NB. Needed because draft doesn't count
@@ -301,7 +300,7 @@ three=: [:+./3<:+        NB. is three
 full =: 2=#@]            NB. is full hous
 four =: [:+./4<:+        NB. is four of a kind
 five =: (5=[)+.[:+./5<:+ NB. is five of a kind
-0 
+0
 }}
 8 day {{ NB. Haunted Wasteland
 NB. Parse: returns 0 1 instructions (LR); boxed node labels, sorted AAA-ZZZ; self-L-R
@@ -316,10 +315,10 @@ p1=:{{
 }}
 NB. That's wild... start at all nodes ending in A until all end up in node ending in Z. (both 6 occurrences)
 NB. Likely too much to simulate together. Find per starting point looplength
-p2 =: {{ 
+p2 =: {{
 NB. Changes w.r.t previous version (see below, resulting in 7.5x faster):
 NB. - Replace combcyc by simple *./L,ll apparently enough (verified with ll's of previous correct version)
-NB. - Remove ends as not needed 
+NB. - Remove ends as not needed
 NB. - Step by entire ins length, instead of 1: a lot simpler, and checks don't need conditionals (7.5x faster)
 NB. - Check loop length for all starts at once: funnily enough a little slower than doing the same for each start seperately, but too lazy to revert
   'ins st'=. par y                 NB. Instructions & states
@@ -359,7 +358,7 @@ pp2 =: {{
     while. 1 do.
       if. 0=L|ct do.         NB. first ins, check for loop
         firsti=. firsti, cur
-        if. (<:#firsti) > firsti i. cur do. 
+        if. (<:#firsti) > firsti i. cur do.
           NB. note: repetition is always of el 1 of firsti
           break. end.        NB. loop is round, break!
       end.
@@ -371,7 +370,7 @@ pp2 =: {{
     end.
     ll  =.ll start_index}~ct NB. store loop length
   end.
-  NB. note: for length, work on -L, re-add later; ll contains initial startup of length #ins, so as experimented, loops start before end of first loop through ins, so discrding this length ensures we're in loop regime. 
+  NB. note: for length, work on -L, re-add later; ll contains initial startup of length #ins, so as experimented, loops start before end of first loop through ins, so discrding this length ensures we're in loop regime.
   ends=. L-~ ends
   ll  =. L-~ ll
   NB. echo ,.&.> ends;ll;L
@@ -381,7 +380,7 @@ pp2 =: {{
   NB. returns end, len for combination of both
   NB.           l0  +until e1=l1|]          e0  , lcm len's
   combcyc =: {{({:y)+^:(({.x)~:({:x)|])^:_ {.y}},*.&{:
-  
+
   NB. fold version: 1+L({. ] F.. combcyc }.) ends,.ll
   1+L+{. combcyc/ ends,.ll
 }}
@@ -429,7 +428,7 @@ ex=. ];._2 {{)n
   NB. Connected syms turn per direction into pairs of self, neigh of connected occurences.
   NB. Note: number of unique and number of dots the same: no boxing required.
   NB. Permute axes to have shift directions first to facilitate checking later.
-  NB.     sort nub;rem having .      perm  self,. neigh 
+  NB.     sort nub;rem having .      perm  self,. neigh
   cs  =. ([: /:~@~.(#~ 0='.'&e."1))"_1]0 2|:({. ,."0 1 |:) pat
   NB. is connected: checks whether neighbouring characters are effectively neighbours; takes literal array: self, RDLU shifts
   isc =. cs&(e."(_1)~ 0 2|:{.,."0 1|:)
@@ -465,7 +464,7 @@ p2=: {{
   NB. FSM for cutting rows into included parts (edges included, could have implemented excluding them)
   NB. State transitions. Assumes only loop ~: '.'; new_state j. operation_code
   NB.     0   1   2   3   4   5   6
-  NB.     .   -   |   F   L   J   7  
+  NB.     .   -   |   F   L   J   7
   s=. ,: 0j0  0  3j1 1j1 2j1  0   0  NB. 0 outside
   s=. s,  0  1j0  0   0   0  3j0 6j0 NB. 1 edge up in
   s=. s, 0j0 2j0  0   0   0  6j0 3j0 NB. 2 edge down in
@@ -526,19 +525,19 @@ par =: ([: (('.'([,,~)])&.>)`(".&.>)"0 [: <;._1 ' ',]);._2
 NB. Check whether list still matches springs; version 1
 NB. chk =: +/@:=&'#';.1~ 2 (~:*.'#'=])/\ '.', ]
 NB. Version 2: FSM ;: makes rec more than DOUBLE as fast
-chk =: ([: {:"1 (2;(+. 0j0 1j1,:0j3 1j0));:'.#'&i.) 
+chk =: ([: {:"1 (2;(+. 0j0 1j1,:0j3 1j0));:'.#'&i.)
 NB. Partial check up to last . (because run of # can be incomplete) after selecting until before last ?
 pchk=: chk@({.~ #|i:&'.')@({.~ i.&'?')
 NB. peq: prefix equal?
-peq =: -:/@(<.&# {."1 ,:) 
+peq =: -:/@(<.&# {."1 ,:)
 NB. Recursively fill ? until no left; count possibilities when coming back.
 rec=:{{ NB. y=list, x=row of springs
   if. (#x)=fq=. x i. '?' do.   NB. done; check entire list; fq = first ?
     y-:chk x
-  else. 
+  else.
     ca=. '.#' fq}"0 1 x        NB. candidates for next ?
     select.  y (peq pchk)"1 ca
-    case. 0 0 do. 0            NB. wrong, exit 
+    case. 0 0 do. 0            NB. wrong, exit
     case. 1 0 do. ({.ca) rec y NB. recurse left
     case. 0 1 do. ({:ca) rec y NB. recurse right
     case. 1 1 do. +&(rec&y)/ca NB. recurse both
@@ -581,7 +580,7 @@ p2 =: {{
     cocurrent i
     coinsert 'd12' NB. Insert this day's definitions
   end.
-  for_b. (-@((>: 1 T.'')) <\ ]) parf y do.
+  for_b. ((->: 1 T.'') <\ ]) parf y do.
     NB. Pass each worker a row and a locale for caching
     p=.p++/> ((wsn{.~#) wl t. 0"0 1 ]) >b
   end.
@@ -616,10 +615,10 @@ rec2=:{{ NB. y: row, list
       fq=. +/}:{:g                   NB. First question mark is after last run (start+len)
       newl=.nn}.l                    NB. Drop complete damaged runs from l
       if.  (-. dam -:nn {. l)do.     NB. Prefix doesn't match, or spurious #'s after partial when y is empty
-        vv =. 0                      
+        vv =. 0
       elseif. (0=# newl)*.'#' e. r }.~ >:fq do. NB. Damaged list is empty, yet # remain after question mark
-        vv =. 0 
-      else.                          
+        vv =. 0
+      else.
         if. code=5 do.                      NB. 5 : Run of .'s ended at ?
           newr=.'.',.'.#',"0 1(>:fq)}.r     NB. 2 New rows of springs
         else.                               NB. 8 : Run of #'s ended at ?
@@ -685,7 +684,7 @@ fix =: {{
   for_c. candTB,candLR do.
     NB. Cannot use refl for same, because it assumes only one reflection line is present.
     NB. Fixing the smudge could cause multiple reflection lines. this was the failure case of my code...
-    nn =. orig ([:(#~]=<.)]-.0,[)&.> ((T,B);(T,B)@|:) c swap y 
+    nn =. orig ([:(#~]=<.)]-.0,[)&.> ((T,B);(T,B)@|:) c swap y
     if. +./#&> nn do.
       {.@(1&{.)&> nn return. NB. assumes only 1 valid swap candidate
     end.
@@ -720,7 +719,7 @@ tilt =: {{
   oax    =. -. ax NB. Cross fingers and hope p2 is 2D as well.
   NB. Comments below relate to 0 0-:ax,se, but code applies to all
   NB. Fixed rocks: box row numbers per column, no prefix required due to padding with #
-  fr =. (oax&{"1 <   /. ax&{"1) x 
+  fr =. (oax&{"1 <   /. ax&{"1) x
   NB. Prefix fake points for ensuring all points accounted for, then discard
   rr =. (oax&{"1 <@}./. ax&{"1) (,.~i=.i.#fr),y
   NB. Find new locations for rolling rocks
@@ -735,9 +734,9 @@ tilt =: {{
   ;i ,.&.>~`(,.&.>)@.ax rbnew
 }}
 NB. Visualisation of field, given boxed coords of fixed and rolling rocks
-vis  =: (('#O'#~#&>@])`(;@])`('.'$~1+>./@;@])}]) 
+vis  =: (('#O'#~#&>@])`(;@])`('.'$~1+>./@;@])}])
 score=: [: +/ ({:@[ -&:({."1) ]) NB. no 1-base correction because of padding
-p1=: [: ([ score 0 1 tilt)&>/ rocks@ppar 
+p1=: [: ([ score 0 1 tilt)&>/ rocks@ppar
 NB. Part 2: score after 1e9 cycles of ULDR
 NB. Single cycle
 cyc=: [ 1 0 tilt [ 0 0 tilt [ 1 1 tilt 0 1 tilt
@@ -750,7 +749,7 @@ p2=: {{
   end.
   NB. Found loop, with length:
   len=. (#found)-ind
-  rem=. <:len|1e9 - #found NB. <: because while has done next cyc 
+  rem=. <:len|1e9 - #found NB. <: because while has done next cyc
   F score F cyc^:rem new
 }}
 NB. Not the fastest; I could reduce some work keeping F boxed per rows and cols but would make structure far less intuitive.
@@ -787,9 +786,10 @@ eq =: {{
 }}
 op =: min`eq@.(*@>@{:@[) NB. if 0: min, else eq
 NB. post: Extract power from state: (box+1)*(slot+1)*FL
-NB.     sum   box no   *   FL ind*slot no perbox sym i. labels 
-post=:[:+/@;(1+i.256) *&.> ({:({~*1+i.@#@])L:0 (1&{ i.L:0 >@{.)) 
-p2=: [: post@(init ] F.. op ]) par NB. TODO: bug? faaar faster than post F..
+NB.     sum   box no   *   FL ind*slot no perbox sym i. labels
+post=:[:+/@;(1+i.256) *&.> ({:({~*1+i.@#@])L:0 (1&{ i.L:0 >@{.))
+p2=: [: post@(init ] F.. op ]) par
+NB. p2=: [: (init post  F.. op ]) par NB. TODO: bug? faaar faster than post F.. even though this would be the natural way of expressing this...
 0
 }}
 16 day {{ NB. The Floor Will Be Lava
@@ -815,15 +815,15 @@ prep=:{{ NB. Split off for p2; FIELD & CAND same for different calls.
   }}
 NB. Laser beam through field y; x= pos,dir
 laser =: {{
-  NB. TODO: Raise J bug: sparse doesn't work.
+  NB. TODO: J bug: sparse versions commented below don't work.
   SEEN  =: 0$~4,$FIELD NB. Indicates whether loc seen in direction (4 directions)
-  NB. SEEN  =: 1 $. (4,$FIELD);0 1;0 NB. Indicates whether loc seen in direction (4 directions)
-  NB. SEEN  =: 1 $. (4,$FIELD) NB. Indicates whether loc seen in direction (4 directions)
+  NB. SEEN  =: 1 $. (4,$FIELD);0 1;0 NB. Indicates whether loc seen in direction (4 directions) -> 0 result, wrong
+  NB. SEEN  =: 1 $. <(4,$FIELD) NB. Indicates whether loc seen in direction (4 directions)      -> nonce error
   NB. Take step until no active points, starting at x. step discards point once seen in a specific direction
   ;@:(<@step"_1)^:(*@#)^:_ ,:x
-  +/,+./SEEN
+  +/,+./SEEN NB. prefixing with $. inv does not help sparse version to work...
 }}
-NB. Tile-laser interaction: x: new pt; y: cur pos,:dir 
+NB. Tile-laser interaction: x: new pt; y: cur pos,:dir
 fsl=: [:,:(,~ -@|.@{.)             NB. tile = '/'
 bsl=: [:,:(,~   |.@{.)             NB. tile = '\'
 min=: ,"1~ (,:-)@|.`,:@.(0={.)@:{. NB. tile = '-'
@@ -915,7 +915,7 @@ traverse =:{{
     can =. i{neig    NB. Candidate indices
     NB. Rotate conditions s.t. 0 ends up at cur. direction; use with u for conditions.
     NB. fil = Boolean mask for allowable candidates
-    fil =. (na~:can) *.(-d)|."0 1 u c 
+    fil =. (na~:can) *.(-d)|."0 1 u c
     NB. Compose new versions of i,a,d,c
     i     =. fil #&, can
     a     =. (i{heatloss) + (pc =. +/"1 fil) # a
@@ -937,7 +937,7 @@ NB. Part 1: max 3 steps in same dir., no 180 deg turns
 NB. Allowable direction, verb taking cur. dir step count
 NB. note that c=0 counts for 1 (to save a dim in seen).
 NB.   L B R    straight            v--- max step count
-p1=: (1 0 1,~"_ 0 <&2)    traverse 3 
+p1=: (1 0 1,~"_ 0 <&2)    traverse 3
 NB. Part 2: straight: minimum 4 blocks, max 10 blocks; still no 180 U-turns.
 NB.   min F  L  B  R max           v--- max step count
 p2=: (>&2(],.[,.0,.[)<&9) traverse 10
@@ -978,13 +978,13 @@ area=: {{
   NB. ..|##  ##|##  ##|##
   NB. ..|##  ##|##  ##|##
   NB. Signed area; area sign indicates sense: + ccw, - cw
-  sar=. ([: -: [: +/ 2: -/ .*\ ]) edge 
+  sar=. ([: -: [: +/ 2: -/ .*\ ]) edge
   NB. Area sum 1/4 inner(1) or outer(3) corner    + 1/2 straight
   (|sar)+(+/1r4*4|(- _1&|.)dirs i. 2{."1 y)+1r2*(+/-#)2{"1 y
   NB. Could depend on area sign for corner in/out though, not sure.
 }}
 NB. Part 2: Oops, have to decode hex instead and apply those as lengths; x: because big num
-NB.        dfh  5 first, dirs   DRUL  last  disc   til first num 
+NB.        dfh  5 first, dirs   DRUL  last  disc   til first num
 par2=: ([: (x:@dfh@(5&{.),~[:x:dirs{~'1032'i.{:) (}:@}.~ 2+i.&'(')) ;._2
 p2=: area@par2
 tst=:{{)n
@@ -1050,7 +1050,7 @@ p2 =:{{
 NB. Convert a workflow to a symbolic name, conditions and corresponding destinations.
 conv2=: {{
   NB. Split workflow name and body. }: discards last }
-  'nm bod'=: ( ({.~ ,&< ((','<;._1@,])@}.~>:)) i.&'{') }: y 
+  'nm bod'=: ( ({.~ ,&< ((','<;._1@,])@}.~>:)) i.&'{') }: y
   bod=. ([: <;._1 ':'&,)&> bod NB. split cond and destination
   NB. Convert conditions to matrix: var ind, op <>,val
   con=. (('xmas' i.{.),('<>'i.1{]),(2".@}.]))&> {."1}:bod
@@ -1075,7 +1075,7 @@ gtrg=:({:@[ (({:@] ,~ >:@[),:(,~{.)) 0&{@[ {])
 NB. x rule, y range; returns 2 ranges
 applyrule =:{{
   rgs=.x ltrg`gtrg@.(1&{@[) y
-  rgs ({.x)}"1 _ y 
+  rgs ({.x)}"1 _ y
 }}
 tst=:{{)n
 px{a<2006:qkq,m>2090:A,rfg}
@@ -1147,12 +1147,12 @@ nop=: (0 3$0)"_ NB. never sends a pulse
 p1 =: {{
   init y
   NB. broadcast  and process pulse verbs; defined here so no recalc of out.
-  bc =: ((0{::OUT),"0 _] 0 0)"1      NB. bc is node 0 
+  bc =: ((0{::OUT),"0 _] 0 0)"1      NB. bc is node 0
   pp =: (ff`conj`bc`nop)@.(KIND{~{.) NB. process pulse~kind
   ct =. 0 0                          NB. counts for L/H pulses
   for. i. 1000 do. NB. limit to 1000 for part 1 only
     pulses=. ,:0 1000 0              NB. button pulse to bc
-    ct=. ct+1 0                      NB. 1 for initial button L 
+    ct=. ct+1 0                      NB. 1 for initial button L
     while. #pulses do.
       pulses=. ;@:(<@pp"1) pulses    NB. process all pulses
       NB. pulses=. ;@:(pp t.''"1) pulses NB. TODO BUG crashes J9.5 (even if here makes no sense, as pulses should be processed in sequence), but should still not crash
@@ -1167,15 +1167,15 @@ NB. After inspection of the graph: it seems the last conjunction before rx might
 NB. Check high inputs to last conjunction, and hope they immediately go into a cycle after the first high
 p2 =: {{
   init y                              NB. init, bc, pp as for part 1
-  bc =: ((0{::OUT),"0 _] 0 0)"1 
-  pp =: (ff`conj`bc`nop)@.(KIND{~{.) 
+  bc =: ((0{::OUT),"0 _] 0 0)"1
+  pp =: (ff`conj`bc`nop)@.(KIND{~{.)
   rx=.(SYMS i. s:<'rx')               NB. Special return node (should be last)
   it=.0
   NB. Last node before rx is &7 having parents 1 3 4 5
   NB. Assume similar setup for inputs other than mine.
   lconmemi =. <,{&IN&>^:(1 2) <rx     NB. Memory indexes for last conjunction
   lcon     =. {.0{::>lconmemi         NB. Last concentrator index
-  found   =. a: $~ {: #&> > lconmemi  NB. Found high pulses 
+  found   =. a: $~ {: #&> > lconmemi  NB. Found high pulses
   NB. Find lengths of cycles giving 1 high at input of last conj (assume that cycles loop after first H)
   while. (2><./#&>found) do.          NB. Until 2 low found for all inputs to lcon
     pulses=. ,:0 1000 0               NB. New button press (dest,src,level)
@@ -1193,11 +1193,6 @@ p2 =: {{
   len =. (-~/)"1 > found              NB. Loop lengths
   *./len                              NB. Loops sync at *./len
 }}
-  NB. Had taken this from day 9 instead of what followed while loop above.
-  NB. Not super slow, but better found for day 9 and used here as well:
-  NB. startlen =. (-~/\)"1 > found 
-  NB. combcyc =. {{({:y)+^:(({.x)~:({:x)|])^:_ {.y}},*.&{:
-  NB. 1+{. combcyc/ startlen
 tst=:{{)n
 broadcaster -> a, b, c
 %a -> b
@@ -1234,15 +1229,15 @@ NB. well as all diagonal and all full blocks:
 these are the reached fields:
                N     North
         N     DFD    D=NW/NE, F=Full
-  N    DFD   DFFFD                    
- WFE  WFFFE WFFFFFE  West/Full/East E 
-  S    DFD   DFFFD   D=SW/SE          
-        S     DFD                   
+  N    DFD   DFFFD
+ WFE  WFFFE WFFFFFE  West/Full/East E
+  S    DFD   DFFFD   D=SW/SE
+        S     DFD
                S     South
-So pouring this into a system of equations leads to: 
+So pouring this into a system of equations leads to:
    #4xdiag (D)= radius - 1, #4xcorner = 4, #full = 1+4*rad*-:rad
    so system to solve is:
-   [ 1  1 0 ]   [C]   
+   [ 1  1 0 ]   [C]
    [ 1  5 1 ] . [F] = (65 +1 2 3*131) walk 7 nup io''
    [ 1 13 2 ]   [D]
 }}
@@ -1258,7 +1253,7 @@ walk=: {{ NB. x: its at which count is needed; y: field
   for_i. >: i. >./x do.            NB. Loop until for i=1...max(x)
     cur =. , cur{nn                NB. Get new neighbours
     NB. Remove non-neigh and seen in odd/even iterations
-    NB.       (non-neigh or non-unique) not-or seen 
+    NB.       (non-neigh or non-unique) not-or seen
     cur =. cur ([#~(=&nonn +. -.@~:)@[ +: e.!.0) soe{::~2|i
     soe =. ,&cur&.>&.((2|i)&{) soe NB. Add cur (all new) to seen at index 2|i
     if. i e. x do.                 NB. one of given iteration lengths reached, save
@@ -1298,7 +1293,7 @@ dropbl=:{{ NB. y: boxed blocks, expected sorted by lowest z cube
     NB. Find block b in field, and corresponding max height.
     mxh   =. >./ (height,0) {~ ind=. field i.!.0 xy=.}:"1 b
     NB. Add unique new xy coords; keep the new mask as it's used further.
-    field =. field,~. xy #~ new=. ind = #field 
+    field =. field,~. xy #~ new=. ind = #field
     NB. Update existing heights, append new ones.
     bh     =. mxh+1+(-<./){:"1 b       NB. New height after dropping block
     newh   =. xy >.//.&(new&#) bh      NB. New heigts (i.e. where xy new)
@@ -1337,7 +1332,7 @@ tst2 =:{{)n
 23 day {{ NB. A Long Walk
 NB. Part 1: Find the longest possible walk from top to bottom via . and >, but
 NB. only going in arrow (slope) direction, and using each tile once.
-NB. viewmat '.# ><^v'i.];._2 io'' 
+NB. viewmat '.# ><^v'i.];._2 io''
 NB. From the looks of it, paths are very tortuous, but not branching often:
 NB. simplify input to a directed graph with distances as edge weight. Make new neigh
 NB. function as needs it needs to account for:
@@ -1347,7 +1342,7 @@ NB. Parse: y: input, returns tile types and indices; .v>^< same as sh4
 par =: [: (('.v>^<' i.'#'-.~,) ,. ($#:'#'I.@:~:,)) ];._2
 sh4 =: <. +. 0j1^i.4  NB. Shift in 4 cardinal directions
 NB. Find neighbours with right connections (. or slope in good dir): returns kinds,neighbours
-NB.      Non-neigh apd |:  types   non-neig<.+ big*  .  +: v > ^ <  neigh ind self shift4@:coords    
+NB.      Non-neigh apd |:  types   non-neig<.+ big*  .  +: v > ^ <  neigh ind self shift4@:coords
 neigh =: (5,~{."1);[: ({:@{: ,~ |:) (5,~{."1) (<:@#@[<.]+#@[*(0&= +: 1 2 3 4&=)@:{~) (i. sh4 +"1/])@:(}."1)
 NB. Part 1: recursive approach. Avoids stepping back to already seen nodes.
 p1 =: {{
@@ -1450,7 +1445,7 @@ nonrecbm=: {{
   cur =. ,:0 0,{.masks  NB. Length, last, visited nodes (could use x: int for visited mask?)
   NB. Filter ind (y) where mask is allowable (cur =x); moved out of loop trying to squeeze some more speed...
   NB.   i   0=curmask bin and   masks of ind
-  fm=:  ] #~ 0= 2&}.@[ +/@:(17 b.)"1 masks{~] 
+  fm=:  ] #~ 0= 2&}.@[ +/@:(17 b.)"1 masks{~]
   NB. newc makes from x: cur and y: reachable ind the new cur
   NB.      cur L + ni  L  sel  =D    LD  start   new  curmsk b-or of masks new inds (ni)
   newc =: (({.@[ + ] ({."1@]#~(={:"1))LD#~S=1{[) , ] , (2}.[) 23 b. masks{~])"1 0
@@ -1461,7 +1456,7 @@ nonrecbm=: {{
     NB. Each state should track visited nodes and exclude those from selection
     NB. new =. ;@:((] <@:newc ]fm D#~S=1&{)"1) cur NB. LD for last path el NB. non-threaded version
     new =. ;@:(nthread ;@:((] <@:newc ]fm D#~S=1&{)"1) t. ''\ ]) cur NB. Find new states per batch of cur
-    cur =. (}."1 (,~ >./)/.. {."1) new   NB. Keep best for each unique last,mask 
+    cur =. (}."1 (,~ >./)/.. {."1) new   NB. Keep best for each unique last,mask
     done =. last = 1&{"1 cur             NB. Find which are done, i.e. arrived at last node
     BEST =: BEST >. >./ done # {."1 cur  NB. Any better than best?
     cur =. cur #~ -. done                NB. Filter done
@@ -1498,7 +1493,7 @@ NB. x crosstime y solves the linear system; returning crossing times: A*t+B = C*
 NB.          (D-B)  %. (_1 if err)  (A,.-B)
 crosstime =: (-~&{. %. :: (_1 _1"_) (,.-)&{:)
 future    =: ([: *./0&<)"1@] NB. Both in future?
-crosspt   =: [:+/(*1,.{.)    NB. Use time for left pt 
+crosspt   =: [:+/(*1,.{.)    NB. Use time for left pt
 lims      =: (2e14&<: *./@:*. <:&4e14)@:crosspt
 NB. Intersect two (x,y) trajectories in 3D
 NB.          mat rg and future t cross         2D  mats
@@ -1515,8 +1510,8 @@ tst=:{{)n
 20, 25, 34 @ -2, -2, -4
 12, 31, 28 @ -1, -2, -1
 20, 19, 15 @  1, -5, -3
-}} NB. expected: 47 p2 tst; pt1 tst gives boxed concatenated lim, future conditions for pairs: 
-NB. Hints in problem text given for test input; verified 
+}} NB. expected: 47 p2 tst; pt1 tst gives boxed concatenated lim, future conditions for pairs:
+NB. Hints in problem text given for test input; verified
 NB. Fut: 1 1 1 0 ; ? ? 0 ; ? 0; 0
 NB. Lim: 1 1 0 ? ; 0 0 ? ; 0 ?; ?
 
@@ -1553,7 +1548,7 @@ sw =: {{
   gr  =. i. #vnames NB. Group index for each vertex in V
   gwc =. _          NB. Min weight of cut-of-phase's
   gmc =. 0 $~ 1+#gr NB. Min cut: cut vertex + groups
-  for_ph. i.<:#V do. 
+  for_ph. i.<:#V do.
     NB. Pick the group having specified node (arbitrary)
     'A vrem'=. (x{gr) ({;({~ <^:3)~) ~.gr NB. selected and remaining vertices
     NB. Mincutphase
@@ -1572,7 +1567,7 @@ sw =: {{
       if. gwc=3 do. break. end.
     end.
     NB. Merge last element of A into previous element of A
-    NB.        s   I. gr=t      srt  s-t 
+    NB.        s   I. gr=t      srt  s-t
     gr =. gr {.@]`(I.@:={:)`[} ts=./:~ _2{. A
     NB. Update EW
     EW =. ts join EW
@@ -1595,11 +1590,10 @@ swm =: {{
   'vnames E' =. (~.@, ([;i.) ]) 0{::y
   NB. Sparse (!perf) connectivity matrix between vertices.
   mat =. ((2*#E)$1{::y) (<(,|."1) E)}1 $.(,~>:>./ ,E);0 1;0
-  NB. BUG TODO report bug error amend with wrong length replacement complains about rank instead.
   gr  =. i. #vnames NB. Group index for each vertex in V
   gwc =. _          NB. Min weight of cut-of-phase's
   gmc =. 0 $~ 1+#gr NB. Min cut: cut vertex + groups
-  for_ph. i.<:#gr do. 
+  for_ph. i.<:#gr do.
     'A B'=. (x{gr) (,@{;({~ <^:3)~)~. gr NB. Initialise A and B
     NB. Mincutphase
     while. #B do. NB. Any v remaining?
@@ -1616,7 +1610,7 @@ swm =: {{
       if. gwc=3 do. break. end. NB. Problem-specific
     end.
     NB. Merge last element of A into previous element of A
-    NB.        s   I. gr=t      srt  s-t 
+    NB.        s   I. gr=t      srt  s-t
     gr =.  (i.~~.) gr {.@]`(I.@:={:)`[} ts=./:~ _2{. A
     NB. Update mat to join last two of A
     mat =. ts joinm mat
@@ -1632,13 +1626,13 @@ swmb =: {{
   gr  =. i. #vnames NB. Group index for each vertex in V
   gwc =. _          NB. Min weight of cut-of-phase's
   gmc =. 0 $~ 1+#gr NB. Min cut: cut vertex + groups
-  for_ph. i.<:#gr do. 
+  for_ph. i.<:#gr do.
     a=. x({=i.@#@~.@])gr NB. Binary mask indicating verts in A
     flip=. _        NB. Last two flips (2nd added later)
     NB. Get bit to be flipped, defined outside of loop
     getbit=.  [: (i. >./) -. * +/@:(#&mat)
     NB. Slower variants; also making a sparse doesn't help.
-    NB. getbit=. [: (i.>./) -. * +/ .*&mat 
+    NB. getbit=. [: (i.>./) -. * +/ .*&mat
     NB. getbit=. -. (I.@[ {~ [: (i.>./)[ # mat +/@:#~ ]) ]
     NB. Mincutphase
     while. +/-.a do.            NB. Any v remaining?
@@ -1655,7 +1649,7 @@ swmb =: {{
       if. gwc=3 do. break. end.
     end.
     NB. Merge last element of A into previous element of A
-    NB.        s   I. gr=t      srt  s-t 
+    NB.        s   I. gr=t      srt  s-t
     gr =.  (i.~~.) gr {.@]`(I.@:={:)`[} ts=./:~ flip
     NB. update mat to join last two of A
     mat =. ts joinm mat
@@ -1663,8 +1657,8 @@ swmb =: {{
   NB. return vertices looked up in vnames
   ((vnames #~ (}.gmc)&e.)&.> (~.@}. (];-.) {.) gmc),<gwc
 }}
-NB. Join row/col x in matrix y;8 $. matters a lot in speed. 
-NB.    rem0   0 where {.ts into rowcol=: ({:ts) row/col removed 
+NB. Join row/col x in matrix y;8 $. matters a lot in speed.
+NB.    rem0   0 where {.ts into rowcol=: ({:ts) row/col removed
 joinm =: 8$.[ 0:`([:<2#{.@[)`]} rowcol
 NB. rowcol sums rows and columns in y specified by x; |: faster than same "1
 NB.        tr sumsel  s      mat without t  rows/cols
@@ -1673,5 +1667,5 @@ p1=: 2 */@:(#&>)@:{. 2 swm 1 ,&<~ par
 NB. Originally took like 10 min. Now 2m20s.
 0
 }}
-NB. echo run 
+NB. Ended day 25 as 11525th
 NB. vim: ts=2 sw=2 et fdm=marker foldmarker={{,}}
