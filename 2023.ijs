@@ -1,13 +1,19 @@
 NB. AoC, 2023
+datadir =: 'data23/'
 {{
 if. -. fexist '~addons/general/jaoc' do.
   install'github:jpjacobs/general_jaoc'
-  echo 'installed general/jaoc; go set up COOKIE.txt'
+  if. -. fexist datadir do. fpathcreate datadir end.
+  if. -. fexist 'COOKIE.txt' do.
+    echo 'installed general/jaoc; go set up COOKIE.txt'
+    echo 'see https://github.com/jpjacobs/general_jaoc/README.md for more information'
+  end.
+  echo 'installed general/jaoc'
 end.
 }}''
 load'general/jaoc'
 NB. Setup this year
-'data23/'setup_aoc_ 2023
+datadir setup_aoc_ 2023
 NB. Notes:
 NB.  - This file uses jaoc for download/upload/day organisation
 NB.  - Each part of each day solves the entire problem, from the problem text up.
