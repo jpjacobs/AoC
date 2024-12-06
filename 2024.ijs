@@ -36,9 +36,9 @@ p2=: [: +/([: +./ 1 safe\. ])@".;._2 NB. count reports where at most 1 unsafe
 3 day {{ NB. Mull it over
 NB. Character mapping
 NB. codes                                characters               other
-M=: 0 1 2 3 4 5 5 5 5 5 5 5 5 5 5 6(a.i.'mul(,0123456789)') }256#7
-S =: +.@:".&> }. <;._2 {{)n NB. state transitions row j: code
-NB. m   u   l   (   ,  num  ) other
+M =: 0 1 2 3 4 5 5 5 5 5 5 5 5 5 5 6(a.i.'mul(,0123456789)') }256#7
+S =: +.@:".&> }. <;._2 {{)n
+NB. m   u   l   (   ,  num  ) other <-in / v-- states
    1j0 0j0 0j0 0j0 0j0 0j0 0j0 0j0 NB. 0 not started
    1j0 2j0 0j0 0j0 0j0 0j0 0j0 0j0 NB. 1 m
    0j0 0j0 3j0 0j0 0j0 0j0 0j0 0j0 NB. 2 u
@@ -47,8 +47,8 @@ NB. m   u   l   (   ,  num  ) other
    0j0 0j0 0j0 0j0 6j0 5j0 0j0 0j0 NB. 5 num1
    0j0 0j0 0j0 0j0 0j0 6j0 0j3 0j0 NB. 6 num2
 }}
-NB.    sum  mule rows boxed nums cut by fsm
-p1=: [: +/ [:*/[:|:@:(".&>) (0;S;M) fsm }:
+NB.    sum   mul    rows boxed nums cut by fsm
+p1=: [: +/ [: */ [: |:@:(".&>) (0;S;M) ;: }:
 NB. Part 2: do() enables and don't() disables
 NB. rather than extend states, filter input
 tst=:'xmul(2,4)&mul[3,7]!^don''t()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))'
