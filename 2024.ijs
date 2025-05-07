@@ -245,16 +245,82 @@ tst=:{{)n
 NB. Part 1: Given a list of RLE file,space pairs, move blocks of last file to first free blocks encountered until done. Files have ID numbers by their order on disk.
 NB. 10000 files;9999 spaces; for part 1 simply simulate
 par =: "."0 @: }: NB. remove LF; char to num
-mem =: (# _1}:@,@:,.~i.@>.@-:@#)  NB. memory with file ind; _1=spc
-NB. recursive update; prevalloc , (i.&_1 
-ind =: _1 (i.&1 , i:&0)@:= ]
-upd =: (ind (|.@:{)`[`]}^:(</@[) ]) 
-NB. memup =: upd mem
-score=: i.@# +/ .* ] * _1&~:
-p1=: score@:(upd^:_)@mem@:par
-tst=: '2333133121414131402 '
+mem =: (# _1}:@,@:,.~i.@>.@-:@#)    NB. memory with file ind; _1=spc
+ind =: _1 (i.&1 , i:&0)@:= ]        NB. first space, last file block
+upd =: (ind (|.@:{)`[`]}^:(</@[) ]) NB. swap if last block > 1st spc
+score=: i.@# +/ .* ] * _1&~:        NB. score
+NB. slow steps is ind (3.3s) and upd (1.5s). Others negligible.
+p1  =: score@:(upd^:_)@mem@:par
+tst =: '2333133121414131402 '
+NB. Part 2 move entire files by descending identifier. If not possiblefile stays put. Try working out perm in condensed form, apply to result of i. in mem and then score
+vis=: '.0123456789#'{~(_1+i.11)i.] NB. Visualization of mem
+p2 =:{{
+  'fil spc' =. <@(]`}:"1) |: _2]\ par y NB. size of and space after file i
+  ids       =. i.#fil              NB. File id's
+  NB. id,fil,spc -> insert id,fil,spcorig-spcnew
+  for_f. i.-#fil do.               NB. try moving f, large id's first
+    NB. both spc and fil per file index; so order spc for lookup
+    pos=. (e=.f{fil) (i.&1)@:<: (ids{spc) NB. first space large enough
+    if. pos >: ids i. f do.
+      continue.
+    end. NB. only move towards front
+    prv=. <:&.(ids&i.) f NB. Previous file in orig, to expand space
+    NB. update new prev, old, cur:0,sz+spc before&after,remaining after f
+    if. 2=#loc=.~.((pos{ids),prv,f) do. NB. move while in same order
+      spc=. spc loc}~ 0,+/(f,prv){spc NB. space=left space+right space
+    else.
+      spc=. spc loc}~ 0,(e++/(f,prv){spc),((pos{ids){spc)-e
+      ids=. (>:pos) ({.,f,f-.~}.) ids NB. update id's
+    end.
+  end.
+  NB. Instantiate memory and score
+  score (fil ,@:,.&(ids&{) spc) #  _1 ,@:,.~ ids
+}}
+0
+}}
+10 day {{ NB. Hoof It
+NB. Part 1: Given map of heights find, per 0, how many different 9's can be reached with orthogonal steps What's the sum?
+par =: _1&"."0 ;._2
+NB. contruct graph
+sh =: 4 2$0 1 1 0 0 _1 _1 0 NB. RULD
+tst =: {{)n
+89010123
+78121874
+87430965
+96549874
+45678903
+32019012
+01329801
+10456732
+}}
+p1 =: {{
+  y =. par y
+  val =: 100,~ ,y NB. heights + nonsense value; linear
+  gr =: (i. sh +"1/~ ]) ($ #: _1 I.@:~: ,) y NB. RULD connected graph
+  gr2 =: val (] >. #@] * 1 ~: }:@[ -~ {~) gr      NB. rem non 1+ cons
+  non =: #gr2 NB. non-neighbour = #gr by construction using i. above
+  heads =: 0 I.@:= , y NB. 0's to start from (196 in my input)
+  NB. for each 0, follow until we have a 9
+  follow =: ([: ~. non -.~ [: ,/ {&gr2`]@.(9={&val))
+  NB. +/;@:(#@(follow^:_) t. ''"0) heads NB. slower as non-threaded is ridiculously fast.
+  +/#@(follow^:_)"0 heads
+}}
+NB. Part 2: Find sum of number of all paths, rather than only destinations. This simply requires not pruning duplicate locations in follow
+NB. TODO: Deduplicate shared code.
+p2 =: {{
+  y =. par y
+  val =: 100,~ ,y NB. heights + nonsense value; linear
+  gr =: (i. sh +"1/~ ]) ($ #: _1 I.@:~: ,) y NB. RULD connected graph
+  gr2 =: val (] >. #@] * 1 ~: }:@[ -~ {~) gr      NB. rem non 1+ cons
+  non =: #gr2 NB. non-neighbour = #gr by construction using i. above
+  heads =: 0 I.@:= , y NB. 0's to start from (196 in my input)
+  NB. for each 0, follow until we have a 9; Removed [: ~. from part 1
+  follow =: (non -.~ [: ,/ {&gr2`]@.(9={&val))
+  +/;@:(#@(follow^:_) t. ''"0) heads NB. slower as non-threaded is ridiculously fast.
+  NB. +/#@(follow^:_)"0 heads
+}}
 0
 }}
 NB. temporary storage
-echo run 9
+echo run 10
 NB. vim: ts=2 sw=2 et fdm=marker foldmarker={{,}}
