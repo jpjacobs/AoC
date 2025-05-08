@@ -321,6 +321,23 @@ p2 =: {{
 }}
 0
 }}
+11 day {{ NB. Plutonian Pebbles
+NB. Part 1: depending on value: 1:, split or *&2024
+par =: ".@}:
+cond=: 1 i.~ (0&=,0=2|10 >.@:^.>:) NB. 0 if 0; 1 if even #dig; 2 else
+spl =: (-@-:@# ]\])&.":            NB. split=group by half length&.":
+NB. Good use for M. : 15x faster
+step=: ;@:(<@(1:`spl`(*&2024)@.cond M."0)) NB. agenda + memoize
+p1 =: [: # step^:25@:par
+NB. Part 2: same, but for 75 steps. Previous approach predictably breaks down.
+NB. remedy: recursion instead of iteration; don't compose entire array, but return count
+cond2=: 1 i.~ (0>[),(0&=,0=2|10 >.@:^.>:)@]NB. 0 if end recurse; 1 if 0; 2 if even #dig; 3 else
+NB. Recursion verb: x: current level (for stopping in time); y: list of numbers
+NB.   sum  dec it cnt  0->1 ; spl even ; *2024  when cond  memoize 
+rec=: [: +/ (<:@[ #@]`($: 1:)`($: spl)`($: *&2024)@.cond2 ])M. "0 NB. note M."0 faster than "0 M.; without never finishes.
+p2 =: 75 rec par@]
+0
+}}
 NB. temporary storage
-echo run 10
+echo run 11
 NB. vim: ts=2 sw=2 et fdm=marker foldmarker={{,}}
