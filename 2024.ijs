@@ -338,6 +338,93 @@ rec=: [: +/ (<:@[ #@]`($: 1:)`($: spl)`($: *&2024)@.cond2 ])M. "0 NB. note M."0 
 p2 =: 75 rec par@]
 0
 }}
+12 day {{ NB. Garden Groups
+NB. Part 1: Find cost of fence for garden per contiguous plant type
+NB. cost =: area * perimeter
+par=: ];._2
+pad=: |:@([,,~)^:2
+NB. Contribution to perimeter with ;._3=#ULRD neigh different from center
+peri =: (1 1,:3) ([:+/4&{ ~: 1 3 5 7&{)@,;._3 '.'&pad
+NB. Area via flow iteration by plant type
+sh =: 5 2$0 0 0 1 1 0 0 _1 _1 0 NB. self+RULD shifts
+NB.     no .  *   max self,neighs by shift converge ids for non-.
+flow =: (*@{. * [:>./{.>."2}.)@:(sh |.!.0/])^:_ @:(*>:@i.@$)
+NB. get indices for entire field
+NB. max~type  field id   binarise (by unique plant types)
+ind  =: (>./)@:(flow"2)@:(="_ 0 ~.@,) NB. faster than t.''
+NB. sum  ind  area*perimeter
+p1=: +/@(ind ((#*+/)/.)&, peri)@:par
+NB. Part 2: Not the perimeter counts, but number of sides
+{{)n 000 001 010 011 100 101 110 111
+..  .#  #.  ##  ..  .#  #.  ## careful not to double count
+.#  .#  .#  .#  ##  ##  ##  ##
+ 1   0   1   0   0   1   0   0 corner on bot right block in the middle
+ 0       2           5
+Do for 4 corners
+}}
+NB. kernel to be executed on 3x3 win~number of corners of center block
+NB.       sum 0 2 5 at 4 corners (inds of borders, in CW order)
+ker  =: [: +/ 0 2 5 e.~ #.@:((0 2 8 6 (],.[,.1|.]) 3 1 5 7)&{)
+NB. convolve 3x3  kernel same ,       after pad
+corners =: (1 1,:3) ker@(= 4&{)@,;._3 '.'&pad
+p2=: +/@(ind ((#*+/)/.)&, corners)@:par
+0
+}}
+13 day {{ NB. Claw Contraption
+NB. Part 1: given 2 buttons each with x-y amounts, what's the least amount of presses to gain most prices?
+NB. note: only positive incr, no neg.
+NB. Parsing a little complicated; 3 lines per machine-> 320x3x2
+par =: _ 3 2 ($,) [: ((".@:#~ e.&'0123456789 ');._2~LF2&E.) LF,~]
+NB. 3 1 +/ .*8400 5400 %.(94 22,:34 67)
+sol =: [: +/ 3 1 +/ .*~ (#~ (-:<.)"1)@:(({:%.|:@}:)"2)
+p1  =: sol@:par
+NB. Part 2; whoops, prizes lie 10000000000000 further
+inc =: 0 0 10000000000000x+"2 ]
+p2  =: sol@:inc@: par
+tst=: {{)n
+Button A: X+94, Y+34
+Button B: X+22, Y+67
+Prize: X=8400, Y=5400
+
+Button A: X+26, Y+66
+Button B: X+67, Y+21
+Prize: X=12748, Y=12176
+
+Button A: X+17, Y+86
+Button B: X+84, Y+37
+Prize: X=7870, Y=6450
+
+Button A: X+69, Y+23
+Button B: X+27, Y+71
+Prize: X=18641, Y=10279
+}}
+0
+}}
+14 day {{ NB. Restroom Redoubt
+NB. Part 1: Given robot locations and velocities, where are they after 100 steps?
+NB. Parse to Nx2x2 $ (x/y, p/v, N)
+par =: [: |: _ 2 2 ($,) [: 0&".;._2 ', 'rplc~ (#~ e.&(Num_j_,',- ',LF))
+NB. Aim for P2 saying: ow, it was not 100 but 100 billion steps.
+dims =: 101 103
+NB. give modular arithmetic a swing; modular update: u is field size, x=#steps and y is 2xN array for p and v
+NB.        p   + #steps * v , bothe mod u
+upd =: {{ {.@] + m. u [ * m. u {:@] }}
+fp  =: (({.dims) upd)`(({:dims) upd)"2 NB. use diff mods for X and Y
+NB.  steps mul per quad=rem any 0     sig rot  center    final pos
+p1  =: 100 */@:(#/.~)@:(#~ [:-.0&e."1)@:*@:|:@(-&(-:@<:dims))@:fp par
+NB. Part 2: Unexpectedly: when do most of the robots form a christmas tree?
+NB. number of robots with neighbours; Tree requires them to be clustered, so look for time with max number of robots with neighbours
+NB.      sum  any neigh># find neigh-ind in inds (y)
+nn =: (# +/@:(+./"1)@:> (i. sh +"1/~ ])) NB. # of robots with neighbours
+NB.         argmax   10000 s   nn  find pos  parsed
+p2    =:([: (i. >./) (i.10000) ;@:(nn@:|:@:fp t.''"0 _) par) NB. threaded 3.8x faster!
+NB. p2    =:([: (i. >./) (i.10000) nn@:|:@:fp"0 _ par)
+tree  =: p2 |:@:fp par
+NB. use: viewmat verif io''[load'viewmat'
+NB.        |: field of '.'  insert # at pos@tree time
+verif =: [:|:(101 103$'.') '#'"1@]`(<@])`[} tree
+0
+}}
 NB. temporary storage
-echo run 11
+echo run 14
 NB. vim: ts=2 sw=2 et fdm=marker foldmarker={{,}}
