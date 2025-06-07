@@ -71,7 +71,7 @@ p2=: [:+/@:, (1 1,:3) ([: e.&pos 0 2 4 6 8({,)]);._3  ];._2
 }}
 5 day {{ NB. Print Queue
 NB. Parse rules&prints   box chunks ending in LF2
-par=: [:  rules`print"+ (LF2&E. <@:,&LF;._2 ])@:(,&LF) 
+par=: [:  rules`print"+ (LF2&E. <@:,&LF;._2 ])@:(,&LF)
   rules=: ((".;._2)@rplc&'|,')&.> NB. str->num
   print=: ([:}.<@".;._2)&.> NB. just to num & box each line; discard empty box (due to LF2 split)
 NB. look up rules in prints i0 <: i1 (note, prints are unique)
@@ -107,7 +107,7 @@ p1   =:{{ NB. explicit because oob needs size of y.
   turn  =: (,:(4 2$_1 0 0 1 1 0 0 _1)&([ {~ 4|1+i.))/@]
   NB. step: y: (pos,:vel) ; x: binary grid: 1=obstruct
   NB. _2 Z: 1 terminating immediately is a bit of a euphemism; hence :: 0: needed
-  step=: [: (+/,:{:)  ]`turn@.(<@check@:(+/)@] { ::0: [) 
+  step=: [: (+/,:{:)  ]`turn@.(<@check@:(+/)@] { ::0: [)
   #@:~. ((_1 0,:~$#:'^'i.&1@:=,) ({.@[ , {. F: step~) 2|'.#'&i.) y
 }}@:par
 NB. Part 2: Find all positions that, when blocked, cause the guard to loop.
@@ -120,29 +120,29 @@ p2=:{{
   grs =. 4 (i.@[ +"1 *) (i. sh +"1/~]) (#:i.@:(*/))$y NB. conn spaces
   NB. OOB should result in error so no <.4**/y or adding that val.
   blocks =. , (i.4) +/ 4*'#'I.@:=,y NB. ind of blocks in each dir
-  NB. blocks ab gr: add blocks to graph to the right. blocks should be all blocks in graph.
-  NB.  gr swap dir   index in lookup
-  ab =. ] {"1~ lu {~ #.@:e.~ 
   NB. lookup table for replacement directions for block destinations
   NB. index into row in case mask as in comment
   lu =.".;._2  {{)n
-  0 1 2 3 NB. 0 0 0 0 
-  0 1 2 0 NB. 0 0 0 1 
-  0 1 3 3 NB. 0 0 1 0 
-  0 1 0 0 NB. 0 0 1 1 
-  0 2 2 3 NB. 0 1 0 0 
-  0 2 2 0 NB. 0 1 0 1 
-  0 3 3 3 NB. 0 1 1 0 
-  0 0 0 0 NB. 0 1 1 1 
-  1 1 2 3 NB. 1 0 0 0 
-  1 1 2 1 NB. 1 0 0 1 
-  1 1 3 3 NB. 1 0 1 0 
-  1 1 1 1 NB. 1 0 1 1 
-  2 2 2 3 NB. 1 1 0 0 
-  2 2 2 2 NB. 1 1 0 1 
-  3 3 3 3 NB. 1 1 1 0 
+  0 1 2 3 NB. 0 0 0 0
+  0 1 2 0 NB. 0 0 0 1
+  0 1 3 3 NB. 0 0 1 0
+  0 1 0 0 NB. 0 0 1 1
+  0 2 2 3 NB. 0 1 0 0
+  0 2 2 0 NB. 0 1 0 1
+  0 3 3 3 NB. 0 1 1 0
+  0 0 0 0 NB. 0 1 1 1
+  1 1 2 3 NB. 1 0 0 0
+  1 1 2 1 NB. 1 0 0 1
+  1 1 3 3 NB. 1 0 1 0
+  1 1 1 1 NB. 1 0 1 1
+  2 2 2 3 NB. 1 1 0 0
+  2 2 2 2 NB. 1 1 0 1
+  3 3 3 3 NB. 1 1 1 0
   0 0 0 0 NB. 1 1 1 1  don't care, can't arrive anyhow.
 }}
+  NB. blocks ab gr: add blocks to graph to the right. blocks should be all blocks in graph.
+  NB.  gr swap dir   index in lookup
+  ab =. ] {"1~ lu {~ #.@:e.~
   gr =. blocks ab grs
   NB. Find "normal" path to locate positions to block & simplify graph
   NB.       apd if new    next@last err? => oob
@@ -155,7 +155,7 @@ p2=:{{
   loops =. ; st ({:@:follow~ gr ,@:ab~ (blocks , (i.4)+]))t.''"0 ]4*route
   loops +/@:< #,gr
 }}@par
-NB. Inconsistent answers were due to a function used in parallel assigning a global 
+NB. Inconsistent answers were due to a function used in parallel assigning a global
 0
 }}
 7 day {{ NB. Bridge Repair
@@ -166,7 +166,7 @@ NB. part 1 bruteforce because fast enough,reverse numbers > J order
 NB.        bx val rev num split@ ' 'without : each line
 par =: ([: <@({.,|.@}.) [: <;._1 ' ',':'-.~]);._2
 NB. apply boxed verbs to numbers by appending, ravel, raze; exec
-apl =: ".@:;@:}:@:,@:,."1 
+apl =: ".@:;@:}:@:,@:,."1
 NB. apl =: [: ; {{".y}}@:;@:}:@:,@:,.t.''"1 NB. {{}} because of bug; slower than other apl version.
 NB. create all ops possibilities
 NB.    open cart prod sel =(+|*) rot  = + * n-2 NB. = as last pad; removed in apl.
@@ -190,7 +190,7 @@ tst =: {{)n
 NB. Part 2: Oh no, a third operation! concatenation
 NB. c=: ([+>.&.(10&^.)@>:@[*]) M. NB. c for concat; no good.
 NB. problem with 0's disappearing when handled as numbers
-NB. 
+NB.
 c=: ,~   &.> M.
 p=: +&.".&.> M.
 t=: *&.".&.> M.
@@ -333,7 +333,7 @@ NB. Part 2: same, but for 75 steps. Previous approach predictably breaks down.
 NB. remedy: recursion instead of iteration; don't compose entire array, but return count
 cond2=: 1 i.~ (0>[),(0&=,0=2|10 >.@:^.>:)@]NB. 0 if end recurse; 1 if 0; 2 if even #dig; 3 else
 NB. Recursion verb: x: current level (for stopping in time); y: list of numbers
-NB.   sum  dec it cnt  0->1 ; spl even ; *2024  when cond  memoize 
+NB.   sum  dec it cnt  0->1 ; spl even ; *2024  when cond  memoize
 rec=: [: +/ (<:@[ #@]`($: 1:)`($: spl)`($: *&2024)@.cond2 ])M. "0 NB. note M."0 faster than "0 M.; without never finishes.
 p2 =: 75 rec par@]
 0
@@ -414,6 +414,7 @@ NB.  steps mul per quad=rem any 0     sig rot  center    final pos
 p1  =: 100 */@:(#/.~)@:(#~ [:-.0&e."1)@:*@:|:@(-&(-:@<:dims))@:fp par
 NB. Part 2: Unexpectedly: when do most of the robots form a christmas tree?
 NB. number of robots with neighbours; Tree requires them to be clustered, so look for time with max number of robots with neighbours
+sh =: 4 2$0 1 1 0 0 _1 _1 0 NB. shifts in 4 dir
 NB.      sum  any neigh># find neigh-ind in inds (y)
 nn =: (# +/@:(+./"1)@:> (i. sh +"1/~ ])) NB. # of robots with neighbours
 NB.         argmax   10000 s   nn  find pos  parsed
@@ -425,6 +426,246 @@ NB.        |: field of '.'  insert # at pos@tree time
 verif =: [:|:(101 103$'.') '#'"1@]`(<@])`[} tree
 0
 }}
+15 day {{ NB. Warehouse Woes
+NB. Part 1: Given field and directions, find locations of boxes after making steps. Boxes can be shoved no matter how many as long as not against the wall.
+par=: [: one`two"0 (<;._2~LF2&E.)@(,&LF)
+two=: ('>v<^' i. LF -.~ ])&.>
+one=: ([: ];._2 ,&LF)&.>
+NB. 50x50 field and 20000 moves
+sh=: 4 2 $ 0 1 1 0 0 _1 _1 0 NB. RDLU shifts = >v<^
+NB. Approach: give each box an id, get coords, make neighbour graph. eoa indicates space. Amend where wall to indicate self to stop chain.
+cg =:(0 I.@:=[) [`[`]}"1 (i.!.0 sh +"1/ ])@] NB. Create graph from coords y and types x; 4 x #y
+NB. Find chain (ending in space or block) from pos in gr in dir; returns inds.
+chain =: {~ :: ] ^: a: NB. x: i{gr; y: starting ind
+NB. Update; x: dir; y: robot pos; returns 0 (state in global vars gr;co)
+upd =: {{
+  mv =. co i.!.0 nrc=. (x{sh)+y NB. Ind of box at mv pos of robot
+  NB. No wall or box in direction: just step
+  if. mv=eoa do. nrc return. end.
+  c =. eoa-.~(x{gr) chain mv     NB. List of ro/boxes to move
+  if. ty{~{:c do.                NB. Last is not wall
+    co =: ((x{sh)+"1 c{co) c} co NB. Update pos of robot+boxes
+    gr =: ty cg co               NB. Recreate graph
+    nrc
+  else. y end.                   NB. Wall: robot keeps pos
+}}
+p1=: {{
+  'f i'=. par y            NB. Field & instructions
+  ty =: 'O' = '.@' -.~ , f NB. 0 wall; 1 box
+  rc =. ($ #: '@' i.~ ,) f NB. Coords of robot in field
+  NB. Graph and coords of any non-space.
+  gr =: ty cg co=: ($#: '.@' I.@:-.@:e.~ ,) f
+  eoa=: #ty NB. Set indicator value for space (used in upd)
+  NB. Find chain from robot pos; if last = space: move, if last is block, stop.
+  rc ] F.. upd i NB. Fold upd over instructions
+  NB. Weigth coord of boxes where type=1, i.e. box.
+  +/ 100 1 +/ .*~  co (#~ 1=]) ty
+}}
+NB. Part 2: The same, but all units in are double in width (but for robot, and step length).
+NB. Part 1's reasoning holds, though needs some adaption for:
+NB. - 2 wide blocks: keep coord, but add 1 in checking
+NB. - Consequently, split graph in u/d (2 neigh) and LR (1 neigh)
+NB. - Robot only 1 wide: take out of gr/ty/co and use coords directly.
+shlr=: 2 2 $ 0 2 0 _2 NB. R L shifts = ><
+NB. Use chain as before for LR, tree for UD.
+cglr =:(0 I.@:=[) [`[`]}"1 (i. shlr +"1/ ])@] NB. Create graph from coords y and types x; 4 x #y
+shud=: 2 3 2 $ 1 _1 1 0  1 1  _1 _1 _1 0  _1 1 NB. UL U UR DL D DR shifts = v^
+cgud =:(0 I.@:=[) [`[`]}"1 (i. shud +"1/ ])@] NB. Create graph from coords y and types x; 4 x #y
+NB. Tree search of graph direction x (2xN) of index y
+tree =: {{
+  eoa  =. {:@$ x
+  keep =. y
+  while. #y do.
+    y =. eoa-.~ ~.x,@:({~"1) y  NB. Look up, keep unique, rem spc
+NB. Self-ref = wall so return 1st wall to signal.
+    if. *#bl =. keep ([-.-.) y do.  {.bl return.
+    else. keep =. keep,y end.  NB. Update keep, continue.
+  end.
+  keep
+}}
+
+NB. Update x: dir; y: robot pos; returns 0 (state in global vars gr;co)
+upd2 =: {{
+  mv =. ((],0 1+"1]) co) i.!.0 nrc=. (x{sh)+y NB. Ind of box at mv pos of robot
+  NB. No wall or box in direction: just step
+  if. mv=2*eoa do. nrc return. end.
+  if. selgr['selgr selopt'=. 2 (|,<.@%~) x do.
+    c =. eoa-.~(selopt{grud) tree  (#co)|mv NB. List of ro/boxes to move
+  else.
+    c =. eoa-.~(selopt{grlr) chain (#co)|mv NB. List of ro/boxes to move
+  end.
+  if. ty{~{:c do. NB. Last is not wall
+    co =: ((x{sh)+"1 c{co) c} co NB. Update pos of robot+boxes
+    grlr =: ty cglr co NB. Recreate LR graph
+    grud =: ty cgud co NB. Recreate UD graph
+    nrc                NB. Return new robot position
+  else. y end.         NB. Wall encountered, robot keeps pos 
+}}
+p2=: {{
+  'f i'=. par y NB. Field & instructions
+  ty =: 'O' = '.@' -.~ , f     NB. Types: 0 wall; 1 box
+  rc =. 1 2*($ #: '@' i.~ ,) f NB. Coords of robot in field
+  NB. Graphs and coords of any non-space
+  'grlr grud' =: ty (cglr;cgud) co=: 1 2 *"1 ($#: '.@' I.@:-.@:e.~ ,) f
+  eoa =: #ty NB. Set indicator value for space (used in upd)
+  NB. Find chain from robot pos; if last = space: move, if last is block, stop.
+  rc ] F.. upd2 i NB. Fold upd2 over instructions
+  NB. Weigth coord of boxes (based on type)
+  +/ 100 1 +/ .*~  co (#~ 1=]) ty
+}}
+NB. Visualisation helper when given co as argument
+vis=:  ('@','#[]'{~(,+:)@[)`(<@(0&{::,(,0 1&+"1)@:(1&{::))@])`('.'$~1 2+>./@;@])}
+tst=: {{)n
+########
+#..O.O.#
+##@.O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+<^^>>>vv<v>>v<<
+}}
+tst2=:{{)n
+#######
+#...#.#
+#.....#
+#..OO@#
+#..O..#
+#.....#
+#######
+
+<vv<<^^<<^^
+}}
+lrg=:{{)n
+##########
+#..O..O.O#
+#......O.#
+#.OO..O.O#
+#..O@..O.#
+#O#..O...#
+#O..O..O.#
+#.OO.O.OO#
+#....O...#
+##########
+
+<vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+<<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+>^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+<><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+}}
+0
+}}
+16 day {{ NB. Reindeer Maze
+NB. Part 1: Find lowest scoring path, with steps being 1 and turns being 1000 points.
+NB. Begs for a recursive approach; but turned out to crash JAndroid...
+NB. Graph of spaces is not enough, as extra cost for turns is to be takeo into account. So I'll split the graph in 4 parts (one for each direction) having connections only to the same spot in two neighbouring planes (i.e. the same spot in the original graph, but facing different directions).
+sh=: 4 2 $ 0 1 1 0 0 _1 _1 0 NB. shifts >v<^
+p1=: {{
+  NB. Get positions of S, E and spaces in field
+  'S E sp' =. 'SE.' <@($@] #: (I.@:= ,))"0 _ ];._2 y
+  NB. Generate original graph for all spaces;start=0 end=1
+  gro =. (i. sh +"1/]) coo=. S,E,sp
+  NB. Upgrade graph to separate directions in different planes
+  NB.     gr update "end" for full gr;gr+ i.4  x N
+  upgr =. (] (4*#@[)`([:I.#@[=[)`]}"1 ] + (i.4) * {:@$) gro
+  NB. Now directions entirely separated. Add connections between directions:
+  NB.   join  add   rotd cross to~:dir
+  gr =. ,/@:((,"0 1) 0|:(1&|. ,: 3&|.)@i.@$) upgr
+  co =. ,/ 4#,:coo NB. coordinates for full graph
+  isE=. e.&(co I.@:(-:"1) {. E) NB. is (c-i) entry E?
+  eoa=.#gr  NB. End-of-array, i.e. no actual neighbor
+  min=. _   NB. Minimum found so far
+  cur=. 0 0 NB. At S in east direction; cost, ind
+  while. #cur do.
+    'cost ind'=. |:cur
+    NB.      replic x3 +st or rotate repl # new inds
+    cost =. cost ((3#[) +1 1000 1000$~#@]) ind=. , gr{~ind
+    NB. Prune E, hopeless and non-neighbours
+    Es   =. isE ind NB. reached the end
+    min  =. min <. Es <./@:# cost NB. Keep best score
+    NB. Keep where not E, eoa or score already > min.
+    keep =. Es +: (eoa=ind) +. (min <: cost)
+    NB.  first per ind sort; cost and ind where keph.
+    cur  =. ({./.~ {:"1) cost (,./:[)&(keep&#) ind
+    NB. cur =. ind (,~ {.@/:~)/..&(keep&#) cost NB. Slower!
+  end.
+  min
+}}
+NB. Part 2: Find best seating position: How many squares are part of any best route?
+NB. After trying to extend my previous approach, it turns out too slow/heavy, so use good old Dijkstra...
+p2 =: {{
+  NB. Get positions of S, E and spaces in field
+  'S E sp' =. 'SE.' <@($@] #: (I.@:= ,))"0 _ ];._2 y
+  NB. Generate graph for all spaces;start=0 end=1
+  np=. {:$ gro =. (i. sh +"1/]) coo=.S,E,sp
+  NB. Upgrade graph to separate directions in different planes
+  NB.     gr update "end" for full gr;gr+ i.4  x N
+  upgr =. (] (4*#@[)`([:I.#@[=[)`]}"1 ] + (i.4) * {:@$) gro
+  NB. Now directions entirely separated. Add connections between directions:
+  NB.   join  add   rotd cross to~:dir
+  gr =. ,/@:((,"0 1) 0|:(1&|. ,: 3&|.)@i.@$) upgr
+  co =. ,/ 4#,:coo NB. Coordinates for full graph
+  Es =. (co I.@:(-:"1) {. E) NB. all nodes corresponding to E
+  dist=. _ $~ #co  NB. Shortest distance from start
+  prev=. a:$~ #co  NB. Shortest distance neighbours
+  q =. i.#co       NB. Queue has all nodes
+  dist=. 0 (0}) dist NB. Only S has weight 0
+  while. #q do.   NB. While q not empty...
+    nod =. q([{~(i.<./)@:{)dist NB. Find node with least dist
+    q   =. q -. nod             NB. Dequeue nod
+    NB. Weight/node for each edge having dest still in queue
+    'w nn'=. |: (e.&q # 1 1000 1000,.]) nod{gr
+    if. -.*#w do. continue. end. NB. Drop dead-ends
+    old  =. nn{dist          NB. Old dist for comparison
+    new  =. old<.w+nod{dist  NB. New dist for neighs found
+    dist =. new nn}dist      NB. Upgrade distances
+    NB. If new better, replace current prev; if new equal, add nod; if new worse, keep current prev; make right verb for each
+    NB.      add  keep repl     =0; >1; <_1
+    ops  =. ((,~&.>)`]`(<@[)) {~ new *@- old
+    NB. prev =. (nod ops"0 ])&.(nn&{) prev NB. loooot slower!
+    prev =. (nod ops"0 nn { prev) nn}prev
+  end.  NB. At this point, the result of p1 is <./Es{dist
+  NB. Walk all paths back to source (which has empty prev)
+  bestxbyy=. ( [#~ (=<./)@:{) NB. x where y is minimal
+  NB. 'prev' is not 100% correct, due to arrival directions not being recorded. So when walking back, check whether difference in distance matches the step taken (straight or turn), and keep only valid steps to add. Due to graph construction, we know that if the nodes are in the same np-sized block, the are in the same direction
+  NB.   diff in dist =   turn if not in same dir.
+  valid=. -&({&dist) = 1+999 * np ({.~:}.)@:<.@:%~ ,
+  NB. Single step (assumes, due to huge difference in turns, that all paths have the same length). Fun fact: 96 different optimal paths are found. If this were much much bigger, should have used recursion instead.
+  NB.          box append   valid   prev nodes to each path
+  step=.;@:(([:< ] ,"1 0 ((valid#]) {::&prev@])@:{:)"1)
+  NB. np| converts back to spatial pos; walk until last col all zero's (at S); start with a single path at lowest distance E.
+  #~.np|,step^:(0 +./@:~: {:"1)^:_ ,:,: {. Es bestxbyy dist
+}}
+tst=:{{)n
+#################
+#...#...#...#..E#
+#.#.#.#.#.#.#.#.#
+#.#.#.#...#...#.#
+#.#.#.#.###.#.#.#
+#...#.#.#.....#.#
+#.#.#.#.#.#####.#
+#.#...#.#.#.....#
+#.#.#####.#.###.#
+#.#.#.......#...#
+#.#.###.#####.###
+#.#.#...#.....#.#
+#.#.#.#####.###.#
+#.#.#.........#.#
+#.#.#.#########.#
+#S#.............#
+#################
+}}
+0
+}}
+
 NB. temporary storage
-echo run 14
+echo run 16
 NB. vim: ts=2 sw=2 et fdm=marker foldmarker={{,}}
