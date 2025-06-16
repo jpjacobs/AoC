@@ -33,7 +33,7 @@ safe=: 2 (-~/\ +.&([: *./ 0&< *. <&4) -/\) ]
 p1=: [: +/safe@".;._2 NB. count safe reports
 p2=: [: +/([: +./ 1 safe\. ])@".;._2 NB. count reports where at most 1 unsafe
 0}}
-3 day {{ NB. Mull it over
+3 day {{ NB. Mull It Over
 NB. Character mapping
 NB. codes                                characters               other
 M =: 0 1 2 3 4 5 5 5 5 5 5 5 5 5 5 6(a.i.'mul(,0123456789)') }256#7
@@ -665,7 +665,224 @@ tst=:{{)n
 }}
 0
 }}
+17 day {{ NB. Chronospatial Computer
+NB. Part 1: Execute 3 bit opcode, val
+NB. parse into program and A B C ip
+par=: [: (>@{: ,&< 0,~[:;3{.]) <@".;._2@:(#~ e.&(LF,',',Num_j_))
+'`xor div pt'=:22 b.`(<.@%)`(32 b.&1@]) NB. xor, int div, 2^
+NB. access to state (on the left)
+'`A B C ip'=: 0&{@[ `(1&{@[)`(2&{@[)`(3&{@[)
+ob =: 4&}.@[ NB. output buffer comes after ABCI
+NB. Values, dyad, x=A B C, y=opcode valcode; returns value
+combo=: {.@] , 0:`1:`2:`3:`A`B`C@.({:@])
+iip =: 2+ip NB. increment instruction pointer
+fetch =: (0 1+ip) {  ] NB. fetch current instruction
+NB. Ops; dyad, x=A B C, y=value; returns new A B C ip ob
+NB. oc:0  1   2   3   4   5   6   7
+op =: adv`bxl`bst`jnz`bxc`out`bdv`cdv@.({.@])
+adv =: [ (((A div pt), B, C, iip,ob){:) combo NB. A div 2^comb
+bdv =: [ ((A, (A div pt) , C,iip,ob){:) combo NB. same B
+cdv =: [ ((A, B, (A div pt), iip,ob){:) combo NB. same C
+bxl =:    (A, (B xor ]), C,iip,ob){: NB. xor B with lit
+bxc =:    (A, (B xor C), C,iip,ob){: NB. xor B with C
+bst =: [ ((A, (8 | ]), C,iip,ob){:) combo NB. mod 8 of B
+jnz =:    (A,B,C,(iip`(])@.(0~:A)),ob){: NB. jump
+NB. out =:    (A,B,C,iip,ob,7 (17 b.) {:@combo) NB. output
+out =:    (A,B,C,iip,ob,8 | {:@combo) NB. output
+p1  =: [:}.@;[:(','<@,":)"(0) 4 }. ([op fetch)~ ::]^:_&>/@:par
+NB. Fold based bruteforce too slow, given high number A.
+NB. Hand-"decompiled" version of my program
+{{)n
+i prog op  arg J
+0:2 4  bst A   B =. 8 | A
+1:1 3  bxl 3   B =. B xor 3
+2:7 5  cdv B   C =. A div 2^B
+3:0 3  adv 3   A =. A div 2^3
+4:1 5  bxl 5   B =. B xor 5
+5:4 4  bxc C   B =. B xor C
+6:5 5  out B   ob=. ob,8|B
+7:3 0  jnz 0   goto 0 if A~:0 => while. A do. ... end.
+}}
+check=:{{ NB. y is initial value for A.
+  'A B C'=. y, 0 0
+  ob =. ''             NB. output buffer
+  while. A do.         NB. 7: jnz 0=restart while A
+    B =. 3 xor 8|A     NB. 0 1 only uses last 3 bits of A!
+    C =. A div pt B    NB. 2 replace with shift
+    A =. A div 8       NB. 3
+    B =. C xor B xor 5 NB. 4 5
+    ob =. ob , 8|B     NB. 6
+  end.
+}} NB. Surprisingly, this is *exactly* as fast as p1 io''
+NB. Every it/output consumes 3 bits of A. so should be between <:2x^3*16 17; decidedly too much to bruteforce (unless very lucky)
+NB. approach: The program has dependent loops, depending on A, and based thereon overwrites B and C before they are first used in each loop. Next loop's A is A shifted to the right 3 bits. So build up A in reverse by adding all 8 possible sets of 3 bits and shifting it to the left.
+NB. Need to keep *all* multiple possible solutions as not all lead to valid solution in next loops. So work on list of candidates, leading to matrices of ac, c, oc.
+p2 =: {{
+  co =: 0{::par y
+  a =. 0
+  b =. 3 xor i.8 NB. b candidates always the same
+  b5=. 5 xor b   NB. same for b xor 5 in befor last line.
+  for_ov. |.co do. NB. walk back!
+    ac =: 8 (i.@[ +/ *) a NB. add candidate bits to A found
+    c=. ac div pt b   NB. c candidates
+    oc=. 8|c xor b5   NB. find outputs for each candidate
+    a =. ; ac <@:#~"1 oc = ov  NB. update A to the found candidate
+  end.
+  NB. Thought I found a bug in AoC, as 2nd smallest value of what I found was accepted, rather than smallest
+  NB. found 236539226447407; but 236539226447469 correct for AoC
+  NB. However was due to int->float by 2^. replacing by logical shift (32 b.) solves the issue. Could probably have used float16 instead as well (e.g. a=: 0fq)
+  {./:~a
+}}
+NB. note: don't use tst for p2 as it does not repeat.
+tst=: {{)n
+Register A: 729
+Register B: 0
+Register C: 0
+
+Program: 0,1,5,4,3,0
+}}
+tst2=:{{)n
+Register A: 2024
+Register B: 0
+Register C: 0
+
+Program: 0,3,5,4,3,0
+}}
+0
+}}
+18 day {{ NB. RAM Run
+NB. Part 1: Shortest path throug memory after 1024 bytes have fallen. Forseable part two: too many blocks falling, run while you can, with changing field.
+par=:".;._2 NB. convert to coords
+NB. dijkstra; x=field y=state = dist/prev/q
+NB. if need to change, remove blocked paths from q.
+NB. could optimise (array-ify; work on all nodes at dist i) as each step has weight 1, but not worth the effort.
+st =:{{
+  'dist q'=.y NB. distances,  queue (as mask)
+  nod  =. (i.<./)(6e3*-.q)>.dist NB. Find node with least dist
+  q    =. 0 nod} q               NB. Dequeue nod
+  NB. Nodes for each dest still in queue
+  nn   =. (#~ {&q) nod{x
+  dist =. (nn (<.>:)&({&dist) nod) nn}dist NB. Upgrade dists
+  dist,:q
+}}
+sh =: 4 2$(,-)0 1 1 0 NB. RDLU shifts
+NB. graph; x: how many blocks to drop; y: list of block coords
+NB.  ind  shifted   first x rem all coords range of input
+gr =: (i. sh +"1/~ ])@({. -.~ ( #:[:i. */)@:(1+>./)@])
+
+NB. init to len+1 for non-neigh, first dist to 0 (start), last not queued as not a real node
+in =: 0 (<0 0,:1 _1)} 6e3 1 #"0~ 1+#@[
+NB. dist end @1kb drop  step till end reached  init  parsed
+p1 =: _2 { {.@(1024&gr ([ st^:(6e3=_2{ {.@])^:_. in)])@:(|."1)@:par
+NB. Part 2: What is the first block that will block the way to the exit?
+NB. binary search over 1024-#par io'' should take 12 it at most. x: fixed info; y:A,B(inclusive); u verb returning 0 or 1 selecting A-mid or mid-B
+NB. trick to get an adv taking middle tine: part bound conj:
+NB. C (A(]:]:B)) => A C B
+bs =: (([(]:]:mid@])) { nr@])^:(1<-~/@])^:_. ({.@:)
+mid=: <.@-:@:(+/)        NB. midpoint between 2 num in y
+nr =: 2 ]\ {. , mid , {: NB. 2 new ranges to pick from.
+NB. core: x:# blocks to drop; y: parsed input
+NB. returns exit clear (1) or not (0)
+core=: 6e3 ~: _2 { {.@(gr( [ st^:(6e3=_2{ {.@])^:_ in) ])
+NB.  pick #bl rng bin search par; split par for easy output.
+p2 =: ({~ (1024,#) core~bs~ ".)@:(];._2)
+
+tst=: {{)n
+5,4
+4,2
+4,5
+3,0
+2,1
+6,3
+2,4
+1,5
+0,6
+3,3
+2,6
+5,1
+1,2
+5,5
+2,5
+6,5
+1,4
+0,4
+6,4
+1,1
+6,1
+1,0
+0,5
+1,6
+2,0
+}}
+0
+}}
+19 day {{ NB. Linen Layout
+NB. Part one: given available towels (~sylables) find how many of the designs (~words) can be made.
+NB. Parse tow&desi    <rem space  block sep by 2 LF's
+par=: [: part`pard"0@(<@(' '-.~]);._2~ LF2&E.) LF,~]
+  part=: ([:s:@(\:#&>)[:<;._2',',~])&.> NB. towels (asc len)
+  pard=:<;._1&.>                        NB. designs
+NB. Posible? x:towels (boxed); y: designs (open)
+pos =: {{
+  if. -.*#y do. 1 return. end. NB. if none left: good.
+  NB. Assumption max towel length = 8
+  if. +./ in=.|.(x e.~ s:@<)\ 8{. y do.
+    ls =. in# (1+i._8) NB. lengths of towels found
+    NB. Fold so sequentially try longest prefixes first (hence sort in part and |. for in), and break when 1 possible found
+    NB. ffwd  val  stop if 1  pos y beheaded by towel lengths
+    1 ] F.. ((] [: ([ 1&Z:) x pos y }.~ ])~) ls
+  else. 0 return. end. NB. not possible.
+}}
+NB. rewritten for using symbols. ~10x faster!
+NB. t. 0 : 2x faster!
+p1 =: [: +/ [: ; (pos  >)t.0"_ 0&>/@:par
+NB. Part 2: Sum of # ways each design can be made.
+NB. num counts number of ways y. Uses globals T, M, K, V for towels, mutex, cache keys & values.
+num =: {{
+  if. -.*#y do. 1 return. end. NB. if none left: 1 possible
+  NB. y in cache? (K querried once) return cached
+  if. >/ ci =. K (#@[,i.) ys=. s:<y do. V{~{:ci return. end.
+  NB. |. removed, need to search all anyhow.
+  if. +./ in=. (T e.~ s:@<)\ 8{. y do.
+    ls=. in#(1+i.8)        NB. lengths of towels found
+    r=.+/ ls num@:}."0 _ y NB. #ways for each beheaded y
+    if. -. 11 T. M do.  NB. If mut lock; else skip
+      if. ys -.@e. K do.   NB. If y still not in cache, add.
+        K=:K,ys [ V=:V,r   NB.   if yes; skip
+      end.
+      13 T. M              NB. Release lock
+    else.
+      echo'no lock'
+    end.
+    r return.              NB. Return r
+  else. 0 return. end. NB. not possible.
+}}
+NB. Tried num as for pos but need to go cache, too slow!
+p2=: {{ NB. Filtering d with part 1 is slower!
+  'T D'=. par y NB. Global so less passing around
+  NB. Thought of initialising K to T, but wrong, as some towels are combinations of others... so initialise empty
+  K=: s:''[V=:0$0 NB. Keys;vals stored chunks encountered
+  V=: 0$0         NB. corresponding values
+  M=: 10 T. 0     NB. mutex for updating
+  NB. +/ ; num t.0@> d NB. bugs ahead! Inconsistent results with j 9.6 Anyhow does not seem much faster...
+  +/ num@> d
+}}
+tst=:{{)n
+r, wr, b, g, bwu, rb, gb, br
+
+brwrr
+bggr
+gbbr
+rrbgbr
+ubwu
+bwurrg
+brgr
+bbrgwb
+}}
+0
+}}
 
 NB. temporary storage
-echo run 16
+echo run 19
+NB. cocurrent'd19'[load'~A/2024.ijs'
 NB. vim: ts=2 sw=2 et fdm=marker foldmarker={{,}}
