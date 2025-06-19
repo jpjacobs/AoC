@@ -881,8 +881,65 @@ bbrgwb
 }}
 0
 }}
+20 day {{ NB. Race Condition
+NB. Part 1: Cheating maze solution: 1 cheat of at most 2 squares. How many cheats would give at least 100 units difference?
+shc=: 2*sh=: 4 2$(,-) 0 1 1 0 NB. shifts, cheat & regular
+NB. Dijkstra; x=field y=state = dist/prev/q
+NB. If need to change, remove blocked paths from q.
+NB. Could optimise (array-ify; work on all nodes at dist i) as each step has weight 1, but not worth the effort.
+st =:{{
+  'dist q'=.y NB. Distances,  queue (as mask)
+  nod  =. (i.<./) dist ([ >. #@[ *-.@]) q NB. Find node with least dist
+  q    =. 0 nod} q NB. Dequeue nod
+  NB. Nodes for each dest still in queue
+  nn   =. (#~ {&q) nod{x
+  dist =. (nn (<.>:)&({&dist) nod) nn}dist NB. Upgrade dists
+  dist;q NB. ; faaar faster than using ,:
+}}
+init=: (0:`[`(#~@])} ; 0{.!.1~-@]) >:@#
+pb=:{{ NB. Solution for both, x: cheat shifts; y: io''
+  NB. Determine cheating shift weights, as normal moves take 1, but cheats take more
+  w =. +/"1@:| x NB. cheating step weights
+  NB. Coords; S E, and then all other locations
+  co =. ;'SE.' <@($@] #: (I.@:=,))"0 _ ];._2 y
+  NB. Full graph as usual
+  gr =. (i. sh +"1/~ ]) co NB. regular  graph
+  gc =. (i. x  +"1/~ ]) co NB. cheating graph
+  NB. As all points have valid cheats, do Dijkstra until convergence, giving min dist to all points. All points are also valid cheat destinations.
+  NB. vis:  viewmat (dtS/E) (<co)} (-'#'=];._2 io'')
+  dts=. 0{:: 0 (] st^:_ init) gr NB. dist to S of each point
+  NB. Only single track, so dstE doesn't need dijkstra
+  dte=. ((>./-])@:}: , {:) dts
+  NB. Piece together dts, dte, gc and w, to find best cheats.
+  NB. dts is pre-cheat; dte is post-cheat, w=cheat dist
+  (_100+1{dts) +/@:>: , (}:dts) + w +"1 gc{dte
+}}
+p1=: shc&pb
+NB. Part 2: Now, 20 ps cheats -> 20 wide diamond
+NB. For once, I actually wrote something that is reusable for part 2 with minor adjustment:)
+shC =: (0 0 , sh) -.~ (#~ 20>:+/"1@:|) ,/,."0 1~i:20
+p2=: shC&pb
+tst=:{{)n
+###############
+#...#...#.....#
+#.#.#.#.#.###.#
+#S#...#.#.#...#
+#######.#.#.###
+#######.#.#...#
+#######.#.###.#
+###..E#...#...#
+###.#######.###
+#...###...#...#
+#.#####.#.###.#
+#.#...#.#.#...#
+#.#.#.#.#.#.###
+#...#...#...###
+###############
+}}
+0
+}}
 
 NB. temporary storage
-echo run 19
-NB. cocurrent'd19'[load'~A/2024.ijs'
+echo run 20
+NB. cocurrent'd20'[load'~A/2024.ijs'
 NB. vim: ts=2 sw=2 et fdm=marker foldmarker={{,}}
