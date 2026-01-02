@@ -5,8 +5,8 @@ if. -. fexist '~addons/general/jaoc' do.
   echo 'installed general/jaoc; go set up COOKIE.txt'
 end.
 }}''
-NB. load'general/jaoc'
-load '~J/general_jaoc/jaoc.ijs'
+load'general/jaoc'
+NB. load '~J/general_jaoc/jaoc.ijs'
 1!:44 jpath '~AoC/'
 NB. Setup this year
 'data25/'setup_aoc_ 2025
@@ -284,7 +284,6 @@ NB. parse: separate lights/buttons/joltages
 par=: ([:li`bu`jo"0 ]<;.1~(i.@# e. i.&'[({'));._2
 NB. li=: (2-.~'.#'i.])&.>     NB. light pats: bool 0/1
 li=: (2 #:inv 2-.~'.#'i.|.)&.>     NB. light pats: bool 0/1
-NB. bu=: <@".;._2&.>          NB. button con: boxed
 bu=: (2 +/ .^ ".);._2&.>          NB. button con: boxed
 jo=: ([:".rplc&'{ } ')&.> NB. joltages  : num list
 NB. Part 1: button toggles lights in list.
@@ -294,161 +293,51 @@ NB. indeed; xor toggle is symmetric, so pressing same button twice is nop.
 NB. possible smart solution:
 NB. sum bits ind of t in xor'd sel from num from buttons
 NB.   +/@#:tar i.~ (xob/@#~ (#&2 #:[:i.2^])@#@]) but
-    NB. not sure if ok... as for second example doesn't hold. maybe xor assumption not right... or conversion button list input to num
+NB. not sure if ok... as for second example doesn't hold. maybe xor assumption not right... or conversion button list input to num
 NB. TODO: MISMATCH ENDIANNESS LIGHTS & BUTTONS
 NB. recurse: (target,buttons) rec step,states; return step when target in states.
-xob =: 22 b.
-it =: 0 0 step^:({.@[ -.@:e. }.@])^:_~ ]
+xorb =: 22 b.
 exp =: {{
-'t b'=. y
-seen=.''
-ct=. st=.0
-NB. echo 'looking for ',":t
-while. 1 do.
-  ct =. >:ct
-  NB. rem seen, uniq st xor buttons
-  NB. TODO: Double check, input 1 ends up with empty state after seeing 64 vals
-  st =. seen -.~ ~. , st xob/ b
-  if. t e. st do. break. end. NB. target found
-  NB. if. 0=100|ct do.  echo ct, t, st ,&$ seen end.
-  if. 0=#st do. 1+'4' end.
-  seen=. seen, st NB. st is know not to be in seen
-end.
-NB. echo 'found t at ',": ct,t
-ct
+  't b'=. y
+  seen=.''
+  ct=. st=.0
+  while. 1 do.
+    ct =. >:ct
+    NB. rem seen, uniq st xor buttons
+    st =. seen -.~ ~. , st xorb/ b
+    if. t e. st do. break. end. NB. target found
+    'No solutions remain' assert 0<#st 
+    seen=. seen, st NB. st is know not to be in seen
+  end.
+  ct
 }}
-NB. oneliner:
-tac =: [: +/@#: (i.~ (xob/@#~ (#&2 #:[:i.2^])@#@]))&>/
 
+NB. TODO: Check: tac, it, step whether salvagable.
+it =: 0 0 step^:({.@[ -.@:e. }.@])^:_~ ]
+NB. oneliner:
+tac =: [: +/@#: (i.~ (xorb/@#~ (#&2 #:[:i.2^])@#@]))&>/
 NB. optim rec: 0): memoize 1): remove previously encountered.
 step=: >:@{.@] , [: ~.@, }.@[ xob/ }.@]
 NB. p1 =: [: +/ tac@}:"1@:par NB. Arg... right for tst, but not for input 504 too high
 NB. parallel doesn't speed up...
 p1 =: [: +/ exp@}:"1@:par NB. also faster than tac...
-NB. Part 2: now for joltages
-NB. exp2 works for tst; too slows for all.
-exp2 =: {{
-'b t'=: y
-NB. max in joltages is 253 and max in b is 1 so digit always fits a byte; encode as literal LATER.
-NB. sort so more impact done first? (\: +/"1)
-b=: |."1 #: b
-SEEN =: 0{.b NB. store seen st's as string
-SEENV =: 0$0 NB. store values for seen elements when known.
-BEST =: _
-echo 'looking for ',":t
-rec  =: {{ NB. x it; y remainder
-  NB. echo (x#'*'),' ',":(ai t),_,ai y
-  if. *./0=y do. NB. arrived!
-    echo'found at ',":x,BEST,y
-    BEST=:BEST<.x
-    0 return.
-    NB.   #it > best or any of y > t
-  elseif. (x >: BEST)+. +./0>y do. NB. no hope
-    _ return. end. NB. return dist to sol
-  st  =. (/: +/"1) y -"1 b NB. greedy: smallest remainder first
-  acc =. _
-  for_s. st do.
-    if. (#SEEN)=i=. SEEN i.!.0 s do. NB. new s?
-      vv=. (x+1) rec s  NB. recurse to get value
-      SEEN  =: SEEN ,s  NB. mark seen
-      SEENV =: SEENV,vv NB. store val
-    else.
-      vv=.i{SEENV
-    end.
-    acc=.acc<.vv NB. 1+ counts this iteration.
-  end.
-  1+acc
-}}
-0 rec t
-}}
+
+NB. Part 2: now for joltages in col 3. Simply bruteforcing is too slow.
 mp=: +/ .*
-rnd =: [: <. 0.5&+
-
-exp3 =: {{
-NB. TODO: attempt joint solution of all problems; asof 1239 buttons only 493 are unique. Problem for tracking value though, as dist to sol is different for each target.
-'b tt'=: y
-NB. max in joltages is 253 and max in b is 1 so digit always fits a byte; encode as literal LATER.
-NB. sort so more impact done first? (\: +/"1)
-bb =: |."1 #: b
-SEEN =: 0$~0,#b NB. store seen st's as string
-BEST =: _
-NB. take out steps that can only be done by 1 item in b.
-NB. repeat until no 1=+/#:b
-off=: 0
-echo bb
-while. ({:$bb)>j =.1 i.~ +/ bb do. NB. j=col in bb
-  echo 'red'
-  i=: 1 i.~ j{"1 bb  NB. i=row in bb
-  off=: off+c=.j{tt  NB. how many times to do this step?
-  tt=: (<<<j){tt-c*i{bb  NB. remove j{t; sub other 1's in b too
-  bb =: (<<<i){ bb {~"1 <<<j NB. remove row i and col j from b
-end.
-b=: 256x&#.  bb NB. back to numbers!
-t=: 256x&#: inv tt NB. TODO check endianness
-
-NB. set guestimate of coeff TODO + coeff as y for rec
-NB. no need for precision far off target, as +/coef is the number of clicks. Round down so we can (hopefully) work up.
-init =: <. (tt % +/ bb) <./@:(-.&0)@:*"1 bb
-echo 'looking for ',":t
-echo 'init guess ',": init +/ .* b
-ct=: 0
-rec  =: {{ NB. x new val ~ y: coeffs for b
-  if. t = x do. NB. arrived!
-    BEST=:BEST<.r=.+/y
-    echo'found at ',":r
-    r return.
-    NB.   #it > best or any of y over or under flow
-  elseif. (BEST<:+/y) +. tt ([+./@:< ]#:~256#~#@[) x do. NB. no hope
-    _ return. end. NB. return dist to sol
-  st  =. SEEN -.!.0~ (+"1/ =@:i.@:#) y NB. New coeffs
-  st  =. (#~ ([: *./"1 >:&0)) st
-  rs  =. st +/ .* b NB. do here to bundle comput.
-  acc =. _
-  for_r. rs do.
-      SEEN  =: SEEN , r_index{st NB. mark seen
-      vv=. r rec r_index{st  NB. recurse to get value
-      acc=. acc<.vv
-  end.
-}}
-off + b (+/ .* rec ]) 0#~#init
-}}
-NB. TODO: Works for tst; but keeps returning to same sol in entire input...
-NB. other idea: bb=: |: ai b ; tt=: ai t; bb mp xx =tt => use (%<./) bb %. tt as first guess and explore around
-NB. requires rewrite so state is xx
-NB. explore e.g. sim anneal
-NB. rather: <.((|: mp %.@:(mp|:)) bb) mp tt moore penrose inverse.
-pp =: [: +/ ]@:(exp2@}."1)@:par NB. TODO: Boooom.
-NB. rewrite with memoizing+recursion
-NB. Integer matrix algebra approach with backtracking: sort eqs up so as much utm as possible. The pivot & combine. recurse on lhs;rhs;sol where sol is proposed solution; return sol found
-ip =: {{
-'r c'=. x
-col =. c {"1 y
-y - (col-r=i.#y) */ y %&(r&{) col
-}}
 NB. integer Gauss-Jordan; presume working with ints, so no tol. Based on ~addons/math/misc/linear.ijs
-igj =: {{
-echo=.]
+gj =: {{
 'r c'=.$y
-i=.j=.0
 rws=. i.r
+i=.j=.0
 while. (i<r)*.(j<c) do.
-  echo'it: i,j= ',":i,j
-  echo y
-  echo 'col ',": col=.| i}.j{"1 y
-  echo 'k= ',": k=. (i.>./)col
+  k=. (i.>./)col=.| i}.j{"1 y
   if. 0~:k{col do.
     if. k do.
-      echo 'sorted y, k= ',":k
-      echo y=. (<i,i+k) C. y
-    end. NB. sort
+      y=. (<i,i+k) C. y
+    end.
     NB. pivot i,j
-    echo 'pivot i,j= ',": i,j
-    echo 'where;factor'
     pcol=. j{"1 y
-    where=. ]-i=i.@#@[ NB. pcol - 1 where row i
-    factor=. %&(i&{)   NB. row i % el@(i,j)
-    NB. TODO: multiply by (]%*.@-.&0) pcol
-    echo y=. y ([-where*/factor) j{"1 y
+    y =. (([- (pcol-i=i.#y) */ %&(i&{)) j{"1]) y
     i =. >: i
   end.
   j=.>:j
@@ -457,8 +346,71 @@ y
 }}
 NB. convert to sys & do Gauss-Jordan; x: to keep rational for non-integer solutions to BL mp B = L
 NB.    Light-Button mat  <. if same gj   append L
-tosys =: (|.@|:@#:&.>@[ <.^:(-:<.)@igj@x:@,.&> ])/@}."1
-
+tosys =: (|.@|:@#:&.>@[ <.^:(-:<.)@gj@x:@,.&> ])/@}."1
+sol =: {{ NB. takes parsed input
+  y=. <@tosys y NB. No check for feasibility, will be stopped by div in any case.
+  NB. remove all-zero rows (overdetermined sys); not required.
+  y =. (({:@$ ~: 0 +/ .=~ ])@:(}:"1) # ])&.> y
+  rat =: (#~ -.@(-: <.)&>) y
+    NB. mul eqs by LCM of denominators for avoiding rational problems.
+    NB. KEEP y =. (* 2 (*./"1)@:({:"1)@:x: ]) y
+  int =: (#~    (-: <.)&>) y NB. For now, split systems by whether rational or not.
+  NB. verify correctness
+  NB. assert. J -: JB mp B
+  NB. score 
+}}
+NB. All posibilities of dividing indistinguishable objects over distinguishable bins.
+div =: {{ NB. y = # bins; x=number to divide
+  assert. x *.&(>:&0) y
+  if. x = 0 do. ,:y#0 return. end. NB. 0 to divide: all bins get 0
+  if. y = 1 do. ,x    return. end. NB. 1 bin left: all objects in that bin.
+  r=. 0$~0,y
+  for_p. i. >:x do.
+    r=. r,p,. (x-p) div <:y
+  end.
+}} M.
+NB. div not enough. Should generalize to divide rhs over differently, rationally sized lhs. 
+NB. All possibilities to divide (possibly rational) rhs using 
+NB. x=rhs to obtain; y=rationally sized bins (all positive); returns coefs for each chunk
+rdiv =: {{
+  if. 0=x  do. ,:0#~#y return. end. NB. 0 to divide: all bins get 0
+  if. 1=#y do.
+    if. (=<.) r=.x%{.y do.  r  return.  else. 0$0 return.  end.
+  end. NB. 1 bin left: all objects in that bin if integer, otherwise, no good solution, remove.
+  assert. *./ y>:0 NB. both chunks should be non-negative; rhs as well, but checked before.
+  r=. 0$~0,#y
+  for_p. x i.@>:@:% f=.{.y do. NB. for each possible coeff for f=.{.y
+    r=. r,p,. (x-p*f) rdiv }. y
+  end.
+}}
+NB. recursively solve.
+rec =: {{ NB. x: JB, y: J; return B
+  if. ((<0 1)&|: -: 0 -.~ ,) x do. 
+    echo 'Finished: x is id mat? ', ": (-: =@i.@#) x
+    y return.
+  end. NB. Solved if diagonal return. NB. TODO: check: ID mat not enough?
+  NB. TODO: Needed? Add check for unsolvable sys : where 1 var is negative; or all zero row in JB ahs non-neg val in J.
+  NB. if. x unsolvable y do. (#y)#_ return. end.
+  NB. (alt test for idmat as first (=@i.@#) -: ({."1~ #)), should imo be always true.
+  NB. Pick eq. with all positive coeff to bruteforce. TODO: enough?
+  eqn   =. (i.>./) pos=. (*./"1>:&0 x) * y (([!&<:+)~ +/"1) x             NB. eq num to remove; possibilities for combinations... (likely need removal for rat.)
+  echo 'Rec on ',(":eqn{pos),' combinations of ',(":+/0<eqn{x),' vars.'   NB. debug output
+  varmsk=. 0<eqn{x                                                        NB. non-zero variable coefficients in eqn{x
+  vals  =. y (rdiv varmsk&#)&(eqn&{) x                                    NB. values that vars can in eqn{x to satisfy equality.
+  remeq =. (<<<eqn)&{                                                     NB. remove equation eqn.
+  Js    =. (remeq y) -"1 guess=. (remeq x) +/ .*"_ 1 varmsk&#inv"1 vals   NB. new RHS, i.e. Js by: fill in vars in sys, and sub from J
+  nx    =. (<(<<eqn),(<<I.varmsk)){x                                      NB. remaining equations: remove eq. and vars appearing in them from JB
+  echo nx;Js
+  sub =. nx rec"_ 1 Js                                 NB. Solve remaining sys x,.Js; keep solutions to guessed rhs only where pos. (entirety assured by rdiv).
+  pos =. *./"1 (0&<: *. (=<.)) sub
+  'Not all sol int' assert *./ ((-:<.)"1) pos#sub
+  NB. Fill in fill mask in sub-solutions, and return one with smallest count
+  if. +./ pos do.                                          NB. Any valid solutions?
+    NB. Should: expand sub to convert back to solutions to original system x,.y; return all possible solutions because longer ones could still be best in combination with higher levels.
+    r=.vals (varmsk&#inv"1@[ + (-.varmsk)&#inv"1@])&(pos&#) sub
+  else. r=.,:1r2 #~ #varmsk end. NB. Else return something rational, so filtered out at next layer back up.
+  ([echo@$)r
+}}
 tst=: {{)n
 [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 [...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}
