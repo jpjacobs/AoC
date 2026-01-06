@@ -351,13 +351,12 @@ sol =: {{ NB. takes parsed input
   y=. <@tosys y NB. No check for feasibility, will be stopped by div in any case.
   NB. remove all-zero rows (overdetermined sys); not required.
   y =. (({:@$ ~: 0 +/ .=~ ])@:(}:"1) # ])&.> y
-  rat =: (#~ -.@(-: <.)&>) y
-    NB. mul eqs by LCM of denominators for avoiding rational problems.
-    NB. KEEP y =. (* 2 (*./"1)@:({:"1)@:x: ]) y
-  int =: (#~    (-: <.)&>) y NB. For now, split systems by whether rational or not.
   NB. verify correctness
+  sols =. (#~ [: (=<./)+/"1)@(}:"1 rec {:"1)t.''&> y
   NB. assert. J -: JB mp B
+  assert. *./;y ([: *./ {:"1@[ -:"1 }:"1@[ mp"_ 1 ])t.''&>  sols 
   NB. score 
+  +/+/@{.@> sols
 }}
 NB. All posibilities of dividing indistinguishable objects over distinguishable bins.
 div =: {{ NB. y = # bins; x=number to divide
@@ -375,42 +374,45 @@ NB. x=rhs to obtain; y=rationally sized bins (all positive); returns coefs for e
 rdiv =: {{
   if. 0=x  do. ,:0#~#y return. end. NB. 0 to divide: all bins get 0
   if. 1=#y do.
-    if. (=<.) r=.x%{.y do.  r  return.  else. 0$0 return.  end.
+    if. (=<.) r=.x%{.y do.  r  return.  else.  0$0 return.  end.
   end. NB. 1 bin left: all objects in that bin if integer, otherwise, no good solution, remove.
   assert. *./ y>:0 NB. both chunks should be non-negative; rhs as well, but checked before.
   r=. 0$~0,#y
-  for_p. x i.@>:@:% f=.{.y do. NB. for each possible coeff for f=.{.y
+  for_p. x i.@>:@:<.@:% f=.{.y do. NB. for each possible coeff for f=.{.y, <. for situations like 61 rdiv 2 2
     r=. r,p,. (x-p*f) rdiv }. y
   end.
 }}
 NB. recursively solve.
 rec =: {{ NB. x: JB, y: J; return B
   if. ((<0 1)&|: -: 0 -.~ ,) x do. 
-    echo 'Finished: x is id mat? ', ": (-: =@i.@#) x
-    y return.
-  end. NB. Solved if diagonal return. NB. TODO: check: ID mat not enough?
+    if. -. (-: =@i.@#) x do. echo 'Done without x=id' end. 
+    r=. ,:y 
+  else. NB. Solved if diagonal return. NB. TODO: check: ID mat not enough?
   NB. TODO: Needed? Add check for unsolvable sys : where 1 var is negative; or all zero row in JB ahs non-neg val in J.
-  NB. if. x unsolvable y do. (#y)#_ return. end.
   NB. (alt test for idmat as first (=@i.@#) -: ({."1~ #)), should imo be always true.
-  NB. Pick eq. with all positive coeff to bruteforce. TODO: enough?
-  eqn   =. (i.>./) pos=. (*./"1>:&0 x) * y (([!&<:+)~ +/"1) x             NB. eq num to remove; possibilities for combinations... (likely need removal for rat.)
-  echo 'Rec on ',(":eqn{pos),' combinations of ',(":+/0<eqn{x),' vars.'   NB. debug output
+  NB. Pick eq. with all positive coeff to bruteforce. 
+  NB. eqn   =. (i. [:<./ -.&0) ndiv=. (*./"1>:&0 x) * y (([!&<:+)~ +/"1) x             NB. eq num to remove; possibilities for combinations... (likely need removal for rat.)
+  eqn   =. (i. >./) ndiv=. (*./"1>:&0 x) * y (([!&<:+)~ +/"1) x             NB. eq num to remove; possibilities for combinations... (likely need removal for rat.)
+  NB. echo 'Rec on ',(":eqn{ndiv),' combinations of ',(":+/0<eqn{x),' vars.'   NB. debug output
   varmsk=. 0<eqn{x                                                        NB. non-zero variable coefficients in eqn{x
   vals  =. y (rdiv varmsk&#)&(eqn&{) x                                    NB. values that vars can in eqn{x to satisfy equality.
+  if. 0=#vals do. 0#,:varmsk return. end.
   remeq =. (<<<eqn)&{                                                     NB. remove equation eqn.
   Js    =. (remeq y) -"1 guess=. (remeq x) +/ .*"_ 1 varmsk&#inv"1 vals   NB. new RHS, i.e. Js by: fill in vars in sys, and sub from J
   nx    =. (<(<<eqn),(<<I.varmsk)){x                                      NB. remaining equations: remove eq. and vars appearing in them from JB
-  echo nx;Js
-  sub =. nx rec"_ 1 Js                                 NB. Solve remaining sys x,.Js; keep solutions to guessed rhs only where pos. (entirety assured by rdiv).
+  'sub nsol' =. nx (;;#&>)@:(<@rec"_ 1) Js                                 NB. Solve remaining sys x,.Js; keep solutions to guessed rhs only where pos. (entirety assured by rdiv).
   pos =. *./"1 (0&<: *. (=<.)) sub
-  'Not all sol int' assert *./ ((-:<.)"1) pos#sub
   NB. Fill in fill mask in sub-solutions, and return one with smallest count
   if. +./ pos do.                                          NB. Any valid solutions?
     NB. Should: expand sub to convert back to solutions to original system x,.y; return all possible solutions because longer ones could still be best in combination with higher levels.
-    r=.vals (varmsk&#inv"1@[ + (-.varmsk)&#inv"1@])&(pos&#) sub
-  else. r=.,:1r2 #~ #varmsk end. NB. Else return something rational, so filtered out at next layer back up.
-  ([echo@$)r
+    r=.(nsol#vals) (varmsk&#inv"1@[ + (-.varmsk)&#inv"1@])&(pos&#) sub
+  else.
+    r=.0#,:varmsk
+  end. NB. Else return something rational, so filtered out at next layer back up.
+end. 
+r
 }}
+p2 =: sol@par 
 tst=: {{)n
 [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 [...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}
