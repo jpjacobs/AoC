@@ -75,7 +75,7 @@ tst=:{{)n
 4 day {{ NB. Printing department
 par =: '.@'i.];._2
 NB. pad=: |:@([,,~)^:2
-pad =: 0&([,[,~[,.~,.)
+pad =: ([,[,~[,.~,.)
 NB. per 3x3 window (padded), middle=@ and max 5 rolls (counting middle as well)
 accessible=:(1 1,:3) (4&{ *. 5>+/)@,;._3 ]
 p1=: [: +/@,@:accessible (0 pad par)
@@ -420,7 +420,96 @@ tst=: {{)n
 }}
 0
 }}
+11 day {{ NB. Reactor
+par =: [: |:@:; <@({.,.}.)@s:@:(' ',':'-.~]);._2
+NB. Part 1: count all paths from you to out
+NB. graph cannot have loops between you-out as otherwise infinite paths.
+p1 =: {{
+  'you out'=: s: ' you out'
+  'i o'  =: par y NB. In/Out nodes
+  next =: o #~ i e. ] NB. find next nodes for current ones
+NB. y current node; x paths from you; returns number of paths 
+  NB.  multip +/rec uniq next until no other than out
+  rec=: (#/.~ +/@:$: ~.)@:next`[@.(0=[:#out-.~])"0
+  1 rec you
+}}
+tst=:{{)n
+aaa: you hhh
+you: bbb ccc
+bbb: ddd eee
+ccc: ddd eee fff
+ddd: ggg
+eee: out
+fff: out
+ggg: out
+hhh: ccc fff iii
+iii: out
+}}
+NB. Part 2: all paths from srv via dac & fft to out
+NB. similar approach, but keep paths going down; when reaching out, check if dac&fft on path.
+NB. 1 rec srv crashes, so likely loops etc when not considering dac & fft.
+NB. first try, make paths srv->dac, then dac->fft then fft -> out + srv-> fft fft-> dac dac->out
+p2 =: {{
+  'svr dac fft out'=. s: ' svr dac fft out'
+  'i o'=. par y     NB. In/Out nodes
+  next =: o #~ i e. ] NB. Find next nodes for current ones
+  NB. TODO new approach: do next till end; keep dict with min&max depth a node is encountered; when finding way to fft/dac/out drop remove those that have min>max dest
+  nodes=. ~.i,o
+  'min max' =: |: (2,~#nodes)($,)10000 _1
+  nod=. svr
+  d =. 0
+  while. (0<#nod) *. (d<5000) do. 
+    up  =. nodes i. nod 
+    min =: d&<.&.(up&{) min NB. min depth it appears
+    max =: d&>.&.(up&{) max NB. max depth it appears
+    d   =.d+1
+    nod =. next nod
+  end.
+  ni=: nodes&i.
+  NB. TODO new rec approach: ds fs rec nod; ret # con to out via nod,fft,dac. ds and fs track whether ds&fs seen.de is depth. Abort when de>max{~nodes i. fft,dac
+  mddf =: max {~ nodes i. dac,fft NB. max depth dac&fft
+  seeni=: 0 2$a:
+  seenv=: 0$0
+  rec =: {{
+    if. (#seeni)>id =. seeni i. x;y do. NB. memoize
+      r=. seenv{~id
+      r return. end.
+    if. y=out do.
+      r=. *./x  NB. 1 if both dac&fft met, 0 otherwise
+    else.
+      nx=. x>.y=dac,fft NB. new x
+      NB. keep next where, if not done, still hope for dac/fft
+      nn=. nx (] #~ *./@(>. mddf >:/ min{~ni)) next y
+      if. #nn do. r=. nx +/@:rec next y else. r=.0 end. 
+      NB. r=. nx +/@:rec next y NB. Without depth check is half as fast due to hopeless cases. note: use timex because of memoizing!
+    end.
+    seeni=: seeni,x;y
+    seenv=: seenv,r
+    r
+  }}"1 0
+  0 0 rec svr NB. run the above.
+}}
+tt=:{{)n
+svr: aaa bbb
+aaa: fft
+fft: ccc
+bbb: tty
+tty: ccc
+ccc: ddd eee
+ddd: hub
+hub: fff
+eee: dac
+dac: fff
+fff: ggg hhh
+ggg: out
+hhh: out
+}}
+0
+}}
+12 day {{ NB. 
+0
+}}
 NB. temporary storage
-echo run 10
+echo run 11
 NB. cocurrent'd21'[load'~A/2024.ijs'
 NB. vim: ts=2 sw=2 et fdm=marker foldmarker={{,}}
