@@ -5,7 +5,7 @@ if. -. fexist '~addons/general/jaoc' do.
   echo 'installed general/jaoc; go set up COOKIE.txt'
 end.
 }}''
-load'general/jaoc'
+load'general/jaoc data/easydict'
 1!:44 jpath '~AoC/' NB. Set ~AoC in ~config/folders.cfg
 'data25/'setup_aoc_ 2025 NB. Setup this year
 NB. Notes:
@@ -13,6 +13,7 @@ NB.  - This file uses jaoc for download/upload/day organisation
 NB.  - Each part of each day solves the entire problem, from the problem text up.
 NB.  - The solution don't depend on any library; sometimes plot or viewmat used for visualisation.
 NB.  - Recommended settings for vim: sw=2 ts=2 et fdm=marker foldmarker={{,}}
+NB.  - Requires j9.8 (beta) or higher, as updated to account for removal of symbols from the language.
 
 NB. TODO: continue checking with day 10, part two, clarify rec.
 
@@ -375,6 +376,7 @@ tst=:{{)n
     NB. Score the first of each solution
     +/+/@{.@> sols
   }}
+  NB. Note: could have used div (non-rational), by first dividing x and y by +./x,y
   NB. Recursively find all possibilities to divide possibly rational number in
   NB.   bins taking differently sized chunks; returns list of chunk per bin.
   NB. x=number to divide; y=bin chunk sizes (all positive)
@@ -426,12 +428,14 @@ tst=: {{)n
 
 11 day {{ NB. Reactor
 NB. Parse graph given as parent:children
+st =: easysym 'initcapacity 600' NB. capacity to avoid currently buggy resize.
+
 NB.    transp raz  par,ch pairs of sym after removing :
-par =: [: |:@:;   <@({.,.}.)@s:@:(' ',':'-.~]);._2
+par =: [: |:@:;   <@({.,.}.)@:s__st@:(];._1)@:(' ',':'-.~]);._2
   NB. Part 1: Count all paths from you to out
   NB. Graph cannot have loops between you-out as otherwise infinite paths.
   p1 =: {{
-    'you out'=: s: ' you out' NB. you and out nodes
+    'you out'=: s__st ];._1 ' you out' NB. you and out nodes
     'i o'  =: par y           NB. In/Out nodes; entire graph
     next =: o #~ i e. ]       NB. Find next nodes for current ones
     NB. y: Current node; x: Paths from you so far; returns number of paths
@@ -457,7 +461,7 @@ iii: out
   NB. not considering dac & fft.  First try, make paths srv->dac, then dac->fft
   NB. then fft -> out + srv-> fft fft-> dac dac->out; too slow.
   p2 =: {{
-    'svr dac fft out'=: s: ' svr dac fft out'
+    'svr dac fft out'=: s__st ];._1 ' svr dac fft out'
     'i o'=. par y
     next =: o #~ i e. ]
     NB. Early abort heuristic: do next from srv till end; keep dict with
@@ -512,7 +516,6 @@ ggg: out
 hhh: out
 }}
 }}
-
 12 day {{ NB. Christmas Tree Farm
   NB. How many of the regions can fit all presents listed
   NB. Parse gifts  & regions @   split after last LF2
